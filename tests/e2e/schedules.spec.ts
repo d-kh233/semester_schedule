@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { closeSettings, openSettings } from './helpers.js'
 
 // «Сегодня» подставляется явно: 31.10.2026
 async function open(page: Page) {
@@ -16,11 +17,12 @@ async function switchTo(page: Page, name: string) {
 }
 
 async function createSchedule(page: Page, name: string, start: string, end: string) {
-  await page.getByText('Управление расписаниями').click()
+  await openSettings(page)
   await page.getByLabel('Название', { exact: true }).fill(name)
   await page.getByLabel('Новое расписание: Начало семестра').fill(start)
   await page.getByLabel('Новое расписание: Конец семестра').fill(end)
   await page.getByRole('button', { name: 'Создать' }).click()
+  await closeSettings(page)
 }
 
 test('первый запуск: «Моё расписание» и «Демо», данные сохранены', async ({ page }) => {
@@ -54,7 +56,7 @@ test('новое расписание создаётся, открывается
 
 test('новое расписание: название обязательно, неверные даты не принимаются', async ({ page }) => {
   await open(page)
-  await page.getByText('Управление расписаниями').click()
+  await openSettings(page)
   await page.getByRole('button', { name: 'Создать' }).click()
   await expect(page.getByRole('alert')).toHaveText('Введите название.')
 
@@ -68,8 +70,10 @@ test('новое расписание: название обязательно, 
 test('расписания независимы: даты демо не меняют «Моё расписание»', async ({ page }) => {
   await open(page)
   await switchTo(page, 'Демо (демо)')
+  await openSettings(page)
   await page.getByLabel('Конец семестра', { exact: true }).fill('2026-12-31')
   await expect(page.getByTestId('month-2027-01')).toHaveCount(0)
+  await closeSettings(page)
 
   await switchTo(page, 'Моё расписание')
   await expect(page.getByTestId('month-2027-01')).toBeVisible()
@@ -82,7 +86,7 @@ test('расписания независимы: даты демо не меня
 
 test('переименование расписания', async ({ page }) => {
   await open(page)
-  await page.getByText('Управление расписаниями').click()
+  await openSettings(page)
   const input = page.getByRole('textbox', { name: 'Название расписания' }).first()
   await input.fill('Осень 2026')
   await input.press('Enter')
@@ -99,6 +103,7 @@ test('архив: расписание скрывается и возвраща�
   await expect(page.getByTestId('month-2027-02')).toBeVisible()
 
   // «Весна» третья в списке
+  await openSettings(page)
   await page.getByRole('button', { name: 'В архив' }).nth(2).click()
   const options = page.getByTestId('schedule-select').locator('option')
   await expect(options).toHaveText(['Моё расписание', 'Демо (демо)'])
@@ -106,7 +111,7 @@ test('архив: расписание скрывается и возвраща�
   await expect(page.getByTestId('month-2027-02')).toHaveCount(0)
   await expect(page.getByTestId('archived-schedules')).toContainText('Весна')
 
-  await page.getByRole('button', { name: 'Вернуть' }).click()
+  await page.getByTestId('archived-schedules').getByRole('button', { name: 'Вернуть' }).click()
   await expect(options).toHaveText(['Моё расписание', 'Демо (демо)', 'Весна'])
 
   // Остаётся одно расписание: его в архив убрать нельзя
@@ -206,7 +211,9 @@ test('«Вписать в окно»: все 31 число помещаются 
     .poll(async () => scroll.evaluate((el) => el.scrollWidth - el.clientWidth))
     .toBeLessThanOrEqual(0)
 
+  await openSettings(page)
   await page.getByRole('button', { name: 'Сбросить ширину' }).click()
+  await closeSettings(page)
   await expect.poll(async () => (await page.getByTestId('head-5').boundingBox())?.width).toBe(52)
 })
 
@@ -232,7 +239,9 @@ test('старые настройки из localStorage переезжают в 
 
   await expect(page.getByTestId('month-2027-02')).toBeVisible()
   await expect(page.getByTestId('month-2027-02')).toHaveCSS('background-color', 'rgb(17, 34, 51)')
+  await openSettings(page)
   await expect(page.getByLabel('Приглушить прошедшие дни')).not.toBeChecked()
+  await closeSettings(page)
   const kept = await page.evaluate(() => localStorage.getItem('semester-schedule:settings'))
   expect(kept).not.toBeNull()
 

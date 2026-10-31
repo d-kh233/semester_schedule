@@ -60,8 +60,7 @@ export function ScheduleManager({ semesters, onCreate, onRename, onArchive, onRe
         : ru.semesterErrors[error]
 
   return (
-    <details className="schedules">
-      <summary>{ru.schedules.manage}</summary>
+    <div className="schedules">
       <div className="schedules__body">
         <fieldset>
           <legend>{ru.schedules.newTitle}</legend>
@@ -129,6 +128,6 @@ export function ScheduleManager({ semesters, onCreate, onRename, onArchive, onRe
           </ul>
         )}
       </div>
-    </details>
+    </div>
   )
 }

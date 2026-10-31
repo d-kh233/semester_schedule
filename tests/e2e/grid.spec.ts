@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { openSettings } from './helpers.js'
 
 // «Сегодня» подставляется явно: 31.10.2026, суббота
 async function openWithToday(page: Page) {
@@ -37,6 +38,7 @@ test('GC-7: 31 ноября серая клетка', async ({ page }) => {
 
 test('режим «вне рамки календаря» для несуществующих дней', async ({ page }) => {
   await openWithToday(page)
+  await openSettings(page)
   await page.getByLabel('Несуществующие дни (31 ноября)').selectOption('hidden')
   await expect(page.getByTestId('cell-2026-11-31')).toHaveClass(/cell--blank-hidden/)
   await expect(page.getByTestId('cell-2026-11-31')).not.toHaveClass(/cell--blank-gray/)
@@ -58,6 +60,7 @@ test('GC-14: прошедшие дни приглушены, настройка 
   await expect(page.getByTestId('cell-2026-11-1')).not.toHaveClass(/cell--past/)
   await expect(page.getByTestId('cell-2026-10-31')).not.toHaveClass(/cell--past/)
 
+  await openSettings(page)
   await page.getByLabel('Приглушить прошедшие дни').uncheck()
   await expect(page.getByTestId('cell-2026-10-30')).not.toHaveClass(/cell--past/)
 })
@@ -77,6 +80,7 @@ test('семестр настраивается: сетка перестраив
   page,
 }) => {
   await openWithToday(page)
+  await openSettings(page)
   await page.getByLabel('Начало семестра', { exact: true }).fill('2027-02-01')
   await page.getByLabel('Конец семестра', { exact: true }).fill('2027-06-30')
   await expect(page.getByTestId('month-2027-02')).toBeVisible()
@@ -87,11 +91,13 @@ test('семестр настраивается: сетка перестраив
 
   await page.reload()
   await expect(page.getByTestId('month-2027-02')).toBeVisible()
+  await openSettings(page)
   await expect(page.getByLabel('Начало семестра', { exact: true })).toHaveValue('2027-02-01')
 })
 
 test('неверный семестр: понятное сообщение, прежняя сетка не ломается', async ({ page }) => {
   await openWithToday(page)
+  await openSettings(page)
   await page.getByLabel('Конец семестра', { exact: true }).fill('2026-08-01')
   await expect(page.getByRole('alert')).toHaveText('Конец семестра раньше начала.')
   await expect(page.getByTestId('month-2026-09')).toBeVisible()
@@ -131,7 +137,7 @@ test('номера недель: маленькая цифра в понедел
 
 test('палитра настраивается: цвет месяца и градиент дней недели', async ({ page }) => {
   await openWithToday(page)
-  await page.getByText('Палитра').click()
+  await openSettings(page)
   await page.getByLabel('Октябрь', { exact: true }).fill('#336699')
   await expect(page.getByTestId('month-2026-10')).toHaveCSS('background-color', 'rgb(51, 102, 153)')
 
@@ -143,7 +149,7 @@ test('палитра настраивается: цвет месяца и гра
   await page.reload()
   await expect(page.getByTestId('month-2026-10')).toHaveCSS('background-color', 'rgb(51, 102, 153)')
 
-  await page.getByText('Палитра').click()
+  await openSettings(page)
   await page.getByRole('button', { name: 'Вернуть цвета по умолчанию' }).click()
   await expect(page.getByTestId('month-2026-10')).toHaveCSS('background-color', 'rgb(201, 154, 120)')
 })

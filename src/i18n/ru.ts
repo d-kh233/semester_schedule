@@ -18,6 +18,21 @@ export const ru = {
   // Индекс 0 — понедельник
   weekdaysShort: ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'],
   loading: 'Загрузка…',
+  topbar: {
+    deadlines: 'Список дедлайнов',
+    settings: 'Настройки',
+  },
+  settings: {
+    title: 'Настройки',
+    close: 'Закрыть',
+    semesterTitle: 'Семестр и вид',
+    schedulesTitle: 'Расписания',
+  },
+  deadlines: {
+    title: 'Список дедлайнов',
+    untilEnd: 'Задания до конца семестра',
+    close: 'Закрыть',
+  },
   grid: {
     label: 'Сетка семестра',
     fitWidth: 'Вписать в окно',
@@ -43,7 +58,6 @@ export const ru = {
     switcher: 'Расписание',
     personalName: 'Моё расписание',
     demoName: 'Демо',
-    manage: 'Управление расписаниями',
     newTitle: 'Новое расписание',
     nameLabel: 'Название',
     create: 'Создать',
@@ -102,11 +116,9 @@ export const ru = {
     },
   },
   events: {
-    listTitle: 'События',
     windows: 'окна',
     plannedWindow: 'планируемое',
     crowdedWindow: 'людное',
-    listNote: 'Временный список. События уже видны блоками в сетке; список пока остаётся для проверки.',
     add: 'Добавить событие',
     empty: 'Событий пока нет',
     noDate: 'без даты',

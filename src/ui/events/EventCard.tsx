@@ -113,7 +113,10 @@ export function EventCard({
         aria-modal="true"
         aria-label={event ? t.titleEdit : t.titleNew}
         onKeyDown={(e) => {
-          if (e.key === 'Escape') onClose()
+          if (e.key === 'Escape') {
+            e.preventDefault()
+            onClose()
+          }
         }}
       >
         <h2>{event ? t.titleEdit : t.titleNew}</h2>
@@ -257,7 +260,7 @@ export function EventCard({
         )}
 
         <div className="card__buttons">
-          <button type="button" onClick={save}>
+          <button type="button" className="btn btn--primary" onClick={save}>
             {t.save}
           </button>
           <button type="button" onClick={onClose}>
@@ -274,7 +277,7 @@ export function EventCard({
               >
                 {t.archive}
               </button>
-              <button type="button" onClick={() => setConfirmingDelete(true)}>
+              <button type="button" className="btn btn--danger" onClick={() => setConfirmingDelete(true)}>
                 {t.delete}
               </button>
             </>
@@ -286,6 +289,7 @@ export function EventCard({
             <p>{t.deleteConfirm}</p>
             <button
               type="button"
+              className="btn btn--danger"
               onClick={() => {
                 onDelete()
                 onClose()

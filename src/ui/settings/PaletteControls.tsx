@@ -13,8 +13,8 @@ export function PaletteControls({ settings, onSettingsChange }: Props) {
   }
 
   return (
-    <details className="palette">
-      <summary>{ru.palette.title}</summary>
+    <section className="palette">
+      <h3>{ru.palette.title}</h3>
       <div className="palette__body">
         <label>
           {ru.palette.weekLight}
@@ -58,6 +58,6 @@ export function PaletteControls({ settings, onSettingsChange }: Props) {
           {ru.palette.reset}
         </button>
       </div>
-    </details>
+    </section>
   )
 }

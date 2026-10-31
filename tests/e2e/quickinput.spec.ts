@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
+import { openList, reloadAndOpenList } from './helpers.js'
 
 // «Сегодня» подставляется явно: 31.10.2026 (суббота)
 async function open(page: Page) {
@@ -10,6 +11,7 @@ async function open(page: Page) {
 async function openDemo(page: Page) {
   await open(page)
   await page.getByTestId('schedule-select').selectOption({ label: 'Демо (демо)' })
+  await openList(page)
   await expect(eventRows(page)).toHaveCount(10)
 }
 
@@ -36,7 +38,7 @@ test('Enter создаёт событие, оно сразу в списке и 
   await expect(input(page)).toHaveValue('')
   await saved(page)
 
-  await page.reload()
+  await reloadAndOpenList(page)
   await expect(eventRows(page)).toHaveCount(11)
   await expect(row(page, 'Матан КР').filter({ hasText: '22.10.2026' })).toBeVisible()
 })
@@ -62,7 +64,7 @@ test('кнопка «Отменить» убирает только что со�
   await expect(eventRows(page)).toHaveCount(10)
   await saved(page)
 
-  await page.reload()
+  await reloadAndOpenList(page)
   await expect(eventRows(page)).toHaveCount(10)
 })
 
@@ -199,7 +201,7 @@ test('TC-15: уровня 5 нет — создать уровень, он по�
   await expect(chip).toHaveAttribute('data-color', '#bfbfbf')
   await saved(page)
 
-  await page.reload()
+  await reloadAndOpenList(page)
   await expect(chip).toHaveAttribute('data-color', '#bfbfbf')
   await row(page, 'Матан КР').filter({ hasText: '22.10.2026' }).getByRole('button').click()
   await expect(
@@ -238,7 +240,7 @@ test('TC-19: неизвестный предмет — создать предм
   await expect(issue(page)).toHaveCount(0)
   await saved(page)
 
-  await page.reload()
+  await reloadAndOpenList(page)
   await enter(page, 'хим кр 27.10')
   await expect(toast(page)).toContainText('Создано: Химия КР, 27.10.2026')
 })
@@ -247,6 +249,7 @@ test('в личном расписании предметов нет: «мата
   page,
 }) => {
   await open(page)
+  await openList(page)
   await enter(page, 'матан кр 21.10')
   await expect(issue(page)).toContainText('Предмета «матан» нет.')
   await issue(page).getByRole('button', { name: 'Создать предмет' }).click()
@@ -270,7 +273,7 @@ test('TC-8: практика с двумя окнами: планируемое 
   await expect(created).toContainText('окна: 10.12.2026 (планируемое), 28.12.2026 (людное)')
   await saved(page)
 
-  await page.reload()
+  await reloadAndOpenList(page)
   await expect(row(page, 'СИИБД Практика')).toContainText(
     'окна: 10.12.2026 (планируемое), 28.12.2026 (людное)',
   )
@@ -305,11 +308,12 @@ test('переключение расписаний не даёт ошибок �
 
   await open(page)
   await page.getByTestId('schedule-select').selectOption({ label: 'Демо (демо)' })
+  await openList(page)
   await expect(eventRows(page)).toHaveCount(10)
   await page.getByTestId('schedule-select').selectOption({ label: 'Моё расписание' })
   await page.getByTestId('schedule-select').selectOption({ label: 'Демо (демо)' })
 
   await expect(input(page)).toHaveCount(1)
-  await expect(page.getByLabel('Начало семестра', { exact: true })).toHaveCount(1)
+  await expect(page.getByRole('button', { name: 'Настройки' })).toHaveCount(1)
   expect(problems).toEqual([])
 })

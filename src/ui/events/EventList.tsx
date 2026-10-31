@@ -13,7 +13,7 @@ interface Props {
   onRestore: (id: string) => void
 }
 
-// Временный список: показывает события, пока блоков в сетке нет
+// Содержимое окна «Список дедлайнов»: задания до конца семестра и архив событий
 export function EventList({ events, types, levels, subjects, onAdd, onOpen, onRestore }: Props) {
   const sorted = [...events].sort((a, b) => compareEvents(a, b, types))
   const live = sorted.filter((e) => !e.archived)
@@ -22,12 +22,11 @@ export function EventList({ events, types, levels, subjects, onAdd, onOpen, onRe
   return (
     <section className="events">
       <div className="events__head">
-        <h2>{ru.events.listTitle}</h2>
+        <h3>{ru.deadlines.untilEnd}</h3>
         <button type="button" onClick={onAdd}>
           {ru.events.add}
         </button>
       </div>
-      <p className="events__note">{ru.events.listNote}</p>
 
       {live.length === 0 ? (
         <p>{ru.events.empty}</p>

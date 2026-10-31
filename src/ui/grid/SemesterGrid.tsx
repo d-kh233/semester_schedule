@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState, type CSSProperties, type PointerEvent } from 'react'
+import { useMemo, useState, type CSSProperties, type PointerEvent, type RefObject } from 'react'
 import { buildCalendar, getDayTiming, weekNumber, type CalendarDay } from '../../core/calendar'
-import type { EventType, ImportanceLevel } from '../../core/catalog'
+import type { EventType, ImportanceLevel, Subject } from '../../core/catalog'
 import { contrastText, weekdayColor } from '../../core/colors'
 import { DEFAULT_CROWDED_DAYS } from '../../core/crowded'
 import { parseIsoDate, type IsoDate } from '../../core/dates'
@@ -9,10 +9,8 @@ import { buildMonthLayouts } from '../../core/gridBlocks'
 import {
   DAYS_IN_ROW,
   DEFAULT_COLUMN_WIDTH,
-  DEFAULT_MONTH_COLUMN_WIDTH,
   clampColumnWidth,
   clampMonthColumnWidth,
-  fitColumnWidth,
   resolveWeekOneMonday,
   type Semester,
 } from '../../core/model'
@@ -30,11 +28,13 @@ interface Props {
   events: EventRecord[]
   types: EventType[]
   levels: ImportanceLevel[]
+  subjects: Subject[]
+  // Прокручиваемая область: нужна верхней панели, чтобы вписать ширину в окно
+  scrollRef: RefObject<HTMLDivElement | null>
   onWeekNumberChange: (monday: IsoDate, number: number) => void
   onWidthsChange: (columnWidths: number[], monthColumnWidth: number) => void
   onCellDoubleClick: (date: IsoDate) => void
   onEventOpen: (eventId: string) => void
-  onResort: () => void
 }
 
 interface Widths {
@@ -61,16 +61,15 @@ export function SemesterGrid({
   events,
   types,
   levels,
+  subjects,
+  scrollRef,
   onWeekNumberChange,
   onWidthsChange,
   onCellDoubleClick,
   onEventOpen,
-  onResort,
 }: Props) {
-  const scrollRef = useRef<HTMLDivElement>(null)
   // Пока тянем границу, ширина меняется на экране, а сохраняется один раз в конце
   const [drag, setDrag] = useState<Widths | null>(null)
-  const [confirmResort, setConfirmResort] = useState(false)
 
   const widths: Widths = drag ?? { columns: semester.columnWidths, month: semester.monthColumnWidth }
   const months = useMemo(
@@ -79,8 +78,16 @@ export function SemesterGrid({
   )
   const layouts = useMemo(
     () =>
-      buildMonthLayouts({ months, events, types, levels, today, crowdedDays: DEFAULT_CROWDED_DAYS }),
-    [months, events, types, levels, today],
+      buildMonthLayouts({
+        months,
+        events,
+        types,
+        levels,
+        subjects,
+        today,
+        crowdedDays: DEFAULT_CROWDED_DAYS,
+      }),
+    [months, events, types, levels, subjects, today],
   )
   // Первая строка сетки каждого месяца: строка дней недели, затем строки событий
   const monthStarts: number[] = []
@@ -123,51 +130,12 @@ export function SemesterGrid({
     window.addEventListener('pointerup', up)
   }
 
-  function fitToWindow() {
-    const available = scrollRef.current?.clientWidth ?? 0
-    const width = fitColumnWidth(available - 2, semester.monthColumnWidth)
-    onWidthsChange(Array<number>(DAYS_IN_ROW).fill(width), semester.monthColumnWidth)
-  }
-
-  function resetWidths() {
-    onWidthsChange(Array<number>(DAYS_IN_ROW).fill(DEFAULT_COLUMN_WIDTH), DEFAULT_MONTH_COLUMN_WIDTH)
-  }
-
   const gridStyle: CSSProperties = {
     gridTemplateColumns: [widths.month, ...widths.columns].map((w) => `${w}px`).join(' '),
   }
 
   return (
-    <div>
-      <div className="grid-toolbar">
-        <button type="button" onClick={fitToWindow}>
-          {ru.grid.fitWidth}
-        </button>
-        <button type="button" onClick={resetWidths}>
-          {ru.grid.resetWidth}
-        </button>
-        {confirmResort ? (
-          <span role="group" aria-label={ru.grid.resort} className="grid-toolbar__confirm">
-            {ru.grid.resortConfirm}
-            <button
-              type="button"
-              onClick={() => {
-                setConfirmResort(false)
-                onResort()
-              }}
-            >
-              {ru.grid.resortYes}
-            </button>
-            <button type="button" onClick={() => setConfirmResort(false)}>
-              {ru.grid.resortNo}
-            </button>
-          </span>
-        ) : (
-          <button type="button" onClick={() => setConfirmResort(true)}>
-            {ru.grid.resort}
-          </button>
-        )}
-      </div>
+    <div className="grid-wrap">
       <div className="grid-scroll" role="region" aria-label={ru.grid.label} ref={scrollRef}>
         <div className="grid" style={gridStyle}>
           <div className="head head--corner" style={{ gridRow: 1, gridColumn: 1 }}>

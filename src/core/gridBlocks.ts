@@ -1,7 +1,7 @@
 // Блоки событий в сетке: что нарисовать в каждом месяце. Чистая логика, без интерфейса.
 
 import type { CalendarMonth } from './calendar'
-import type { EventType, ImportanceLevel } from './catalog'
+import type { EventType, ImportanceLevel, Subject } from './catalog'
 import { isCrowdedDate } from './crowded'
 import { compareIsoDates, type IsoDate } from './dates'
 import { eventColor, type EventRecord } from './events'
@@ -17,7 +17,10 @@ export interface GridBlock {
   endDay: number
   // Строка внутри месяца, с нуля
   row: number
+  // Короткая подпись в блоке («Англ КР»)
   label: string
+  // Название события как оно хранится (для подсказки)
+  fullTitle: string
   // Цвет по важности или по типу; null — бесцветная ячейка (BR-3)
   color: string | null
   background: boolean
@@ -44,6 +47,8 @@ export interface BlockInput {
   events: EventRecord[]
   types: EventType[]
   levels: ImportanceLevel[]
+  // Нужны для короткой подписи; без них подпись равна названию
+  subjects?: Subject[]
   today: IsoDate
   crowdedDays: number
 }
@@ -67,11 +72,24 @@ function clipToMonth(month: CalendarMonth, span: DateSpan) {
   return { first, last }
 }
 
+// Имя предмета в начале названия заменяется коротким («Англ. яз. КР» → «Англ КР»)
+export function blockLabel(title: string, subject: Subject | null): string {
+  if (!subject) return title
+  const full = subject.name.trim()
+  const short = subject.shortName.trim()
+  if (!full || !short || full.toLowerCase() === short.toLowerCase()) return title
+  if (!title.toLowerCase().startsWith(full.toLowerCase())) return title
+  const rest = title.slice(full.length)
+  if (rest !== '' && !/^\s/.test(rest)) return title
+  return `${short.charAt(0).toUpperCase()}${short.slice(1)}${rest}`
+}
+
 function piecesOf(
   event: EventRecord,
   month: CalendarMonth,
   input: BlockInput,
   type: EventType | null,
+  subject: Subject | null,
   background: boolean,
 ): Piece[] {
   const spans = eventSpans(event)
@@ -90,7 +108,8 @@ function piecesOf(
       startDay: clip.first.day,
       endDay: clip.last.day,
       lane: event.lane ?? 0,
-      label: event.title,
+      label: blockLabel(event.title, subject),
+      fullTitle: event.title,
       color,
       background,
       done: event.done,
@@ -118,7 +137,10 @@ export function buildMonthLayouts(input: BlockInput): MonthLayout[] {
     const pieces: Piece[] = []
     for (const event of shown) {
       const type = input.types.find((t) => t.id === event.typeId) ?? null
-      pieces.push(...piecesOf(event, month, input, type, isBackgroundEvent(event, input.types)))
+      const subject = input.subjects?.find((x) => x.id === event.subjectId) ?? null
+      pieces.push(
+        ...piecesOf(event, month, input, type, subject, isBackgroundEvent(event, input.types)),
+      )
     }
     // Фоновые строки идут после последней дорожки дедлайнов этого месяца (BR-7)
     const deadlineRows = laneCount(pieces.filter((p) => !p.background))

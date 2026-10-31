@@ -30,7 +30,7 @@ function tooltip(block: GridBlock): string {
   if (block.planned) marks.push(ru.grid.blockPlanned)
   if (block.crowded) marks.push(ru.grid.blockCrowded)
   if (block.done) marks.push(ru.grid.blockDone)
-  return marks.length > 0 ? `${block.label} (${marks.join(', ')})` : block.label
+  return marks.length > 0 ? `${block.fullTitle} (${marks.join(', ')})` : block.fullTitle
 }
 
 export function EventBlock({ block, monthKey, firstRow, mutePast, onOpen }: Props) {

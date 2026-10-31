@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
+import { openList, openSettings } from './helpers.js'
 
 // «Сегодня» подставляется явно: 31.10.2026 (суббота)
 async function open(page: Page) {
@@ -10,6 +11,7 @@ async function open(page: Page) {
 async function openDemo(page: Page) {
   await open(page)
   await page.getByTestId('schedule-select').selectOption({ label: 'Демо (демо)' })
+  await openList(page)
   await expect(page.getByTestId('event-list').getByRole('listitem')).toHaveCount(10)
 }
 
@@ -54,7 +56,7 @@ test('демо: события нарисованы блоками в сетке
   await expect(blockOf(page, '2026-10', 'Матан КР')).toHaveCount(1)
   await expect(blockOf(page, '2026-10', 'СИИБД КР')).toHaveCount(1)
   await expect(blockOf(page, '2026-11', 'СИИБД РТ 3,4')).toHaveCount(1)
-  await expect(blockOf(page, '2026-11', 'Англ. яз. тест')).toHaveCount(1)
+  await expect(blockOf(page, '2026-11', 'Англ тест')).toHaveCount(1)
   await expect(blockOf(page, '2026-12', 'Подготовка к экзаменам')).toHaveCount(1)
   // дело без даты в сетке не показывается
   await expect(page.locator('.block').filter({ hasText: 'Физра тест' })).toHaveCount(0)
@@ -116,17 +118,18 @@ test('GC-14, GC-15: прошедшие и выполненные блоки пр
   // 21.10 уже прошло, 14.12 выполнено
   await expect(blockOf(page, '2026-10', 'Матан КР')).toHaveClass(/block--past/)
   await expect(blockOf(page, '2026-12', 'Матан КР')).toHaveClass(/block--done/)
-  await expect(blockOf(page, '2026-12', 'Англ. яз. КР')).not.toHaveClass(/block--(past|done)/)
+  await expect(blockOf(page, '2026-12', 'Англ КР')).not.toHaveClass(/block--(past|done)/)
   // блок, который ещё идёт, не приглушён
   await expect(blockOf(page, '2026-10', 'Хакатон')).not.toHaveClass(/block--past/)
 
+  await openSettings(page)
   await page.getByLabel('Приглушить прошедшие дни').uncheck()
   await expect(blockOf(page, '2026-10', 'Матан КР')).not.toHaveClass(/block--past/)
 })
 
 test('двойной щелчок по блоку открывает карточку этого события', async ({ page }) => {
   await openDemo(page)
-  await blockOf(page, '2026-11', 'Англ. яз. тест').dblclick()
+  await blockOf(page, '2026-11', 'Англ тест').dblclick()
   const dialog = page.getByRole('dialog')
   await expect(dialog.getByLabel('Название', { exact: true })).toHaveValue('Англ. яз. тест')
 })
@@ -142,25 +145,25 @@ test('строка ввода: событие сразу блоком в сет�
 
   // новое событие раньше по дате, но создано позже: чужие строки не двигаются
   await enter(page, 'англ тест 21.10')
-  await expect(blockOf(page, '2026-10', 'Англ. яз. тест')).toHaveCount(1)
+  await expect(blockOf(page, '2026-10', 'Англ тест')).toHaveCount(1)
   expect(await at('Матан КР')).toBe(matanBefore)
   expect(await at('СИИБД КР')).toBe(siibdBefore)
   // новая строка в месяце добавилась, хакатон ушёл ниже
   expect(await at('Хакатон')).toBeGreaterThan(hackBefore)
-  expect(await at('Англ. яз. тест')).toBeGreaterThan(siibdBefore)
+  expect(await at('Англ тест')).toBeGreaterThan(siibdBefore)
 })
 
 test('строки сохраняются после перезагрузки страницы', async ({ page }) => {
   await openDemo(page)
   await enter(page, 'англ тест 21.10')
-  await expect(blockOf(page, '2026-10', 'Англ. яз. тест')).toHaveCount(1)
+  await expect(blockOf(page, '2026-10', 'Англ тест')).toHaveCount(1)
   await saved(page)
-  const at = () => offsetInMonth(page, blockOf(page, '2026-10', 'Англ. яз. тест'), '2026-10')
+  const at = () => offsetInMonth(page, blockOf(page, '2026-10', 'Англ тест'), '2026-10')
   const before = await at()
 
   await page.reload()
   await page.getByTestId('schedule-select').selectOption({ label: 'Демо (демо)' })
-  await expect(blockOf(page, '2026-10', 'Англ. яз. тест')).toHaveCount(1)
+  await expect(blockOf(page, '2026-10', 'Англ тест')).toHaveCount(1)
   expect(await at()).toBe(before)
 })
 
@@ -217,6 +220,7 @@ test('GC-8 на уровне раскладки: событие после ар�
   page,
 }) => {
   await open(page)
+  await openList(page)
   await enter(page, 'аа 21.10')
   await expect(page.locator('.block').filter({ hasText: 'аа' })).toHaveCount(1)
   await enter(page, 'бб 21.10')

@@ -1,10 +1,12 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
+import { openList, reloadAndOpenList } from './helpers.js'
 
 // «Сегодня» подставляется явно: 31.10.2026
 async function open(page: Page) {
   await page.clock.install({ time: new Date('2026-10-31T12:00:00') })
   await page.goto('/')
   await expect(page.getByTestId('month-2026-09')).toBeVisible()
+  await openList(page)
 }
 
 async function saved(page: Page) {
@@ -15,7 +17,7 @@ async function switchTo(page: Page, name: string) {
   await page.getByTestId('schedule-select').selectOption({ label: name })
 }
 
-const dialog = (page: Page) => page.getByRole('dialog')
+const dialog = (page: Page) => page.getByRole('dialog', { name: /^(Новое событие|Событие)$/ })
 const row = (page: Page, text: string): Locator =>
   page.getByTestId('event-list').getByRole('listitem').filter({ hasText: text })
 
@@ -56,7 +58,7 @@ test('новое событие создаётся кнопкой, видно в
   await expect(row(page, 'Отчёт')).toContainText('10.11.2026')
   await saved(page)
 
-  await page.reload()
+  await reloadAndOpenList(page)
   await expect(row(page, 'Отчёт')).toBeVisible()
 
   // События расписаний не смешиваются
@@ -154,7 +156,7 @@ test('название строится из предмета и типа; но�
   await saved(page)
 
   // Предмет остаётся после перезагрузки, но в демо его нет
-  await page.reload()
+  await reloadAndOpenList(page)
   await expect(row(page, 'Матан КР')).toBeVisible()
   await switchTo(page, 'Демо (демо)')
   await page.getByRole('button', { name: 'Добавить событие' }).click()
@@ -204,7 +206,7 @@ test('правка события: изменения сохраняются, о
   await expect(row(page, 'Англ. яз. зачёт')).toContainText('Англ. яз. · Тест · 13.11.2026 17:00')
   await saved(page)
 
-  await page.reload()
+  await reloadAndOpenList(page)
   await switchTo(page, 'Демо (демо)')
   await row(page, 'Англ. яз. зачёт').getByRole('button').click()
   await expect(dialog(page).getByLabel('Заметка', { exact: true })).toHaveValue('взять словарь')
@@ -219,7 +221,7 @@ test('галочка «Выполнено» помечает событие', as
   await expect(row(page, 'Сдать долг')).toContainText('выполнено')
   await saved(page)
 
-  await page.reload()
+  await reloadAndOpenList(page)
   await expect(row(page, 'Сдать долг')).toContainText('выполнено')
 })
 
@@ -232,7 +234,7 @@ test('LC-6: архив скрывает событие из списка и во
   await expect(page.getByTestId('event-archive')).toContainText('Старое дело')
   await saved(page)
 
-  await page.reload()
+  await reloadAndOpenList(page)
   await expect(page.getByTestId('event-archive')).toContainText('Старое дело')
 
   await page.getByTestId('event-archive').getByRole('button', { name: 'Вернуть' }).click()
@@ -263,7 +265,7 @@ test('LC-7: удаление только после подтверждения;
   await expect(page.getByTestId('event-archive')).toHaveCount(0)
   await saved(page)
 
-  await page.reload()
+  await reloadAndOpenList(page)
   await switchTo(page, 'Демо (демо)')
   await expect(page.getByTestId('event-list').getByRole('listitem')).toHaveCount(9)
   await expect(row(page, 'Физра тест')).toHaveCount(0)
@@ -311,6 +313,7 @@ test('база версии 1 (шаг 3а) обновляется до верс�
   await page.clock.install({ time: new Date('2026-10-31T12:00:00') })
   await page.goto('/')
   await expect(page.getByTestId('month-2027-02')).toBeVisible()
+  await openList(page)
   await expect(page.getByTestId('schedule-select').locator('option')).toHaveText([
     'Старое расписание',
   ])
@@ -321,7 +324,7 @@ test('база версии 1 (шаг 3а) обновляется до верс�
   await addEvent(page, 'Новое дело', '2027-02-10')
   await expect(row(page, 'Новое дело')).toBeVisible()
   await saved(page)
-  await page.reload()
+  await reloadAndOpenList(page)
   await expect(row(page, 'Новое дело')).toBeVisible()
   await expect(page.getByTestId('weeknum-2027-02-08')).toHaveText('1')
 })
