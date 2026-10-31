@@ -93,3 +93,9 @@ export function weekday(date: IsoDate): number {
   const n = toDayNumber(date)
   return (((n + 3) % 7) + 7) % 7
 }
+
+// Для показа пользователю: 21.10.2026
+export function formatDateRu(date: IsoDate): string {
+  const { year, month, day } = parseIsoDate(date)
+  return `${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}.${year}`
+}

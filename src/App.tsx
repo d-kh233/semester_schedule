@@ -2,16 +2,23 @@ import { useEffect, useState } from 'react'
 import { todayIso } from './app/today'
 import { useAppData } from './app/useAppData'
 import { weekOneMondayFor } from './core/calendar'
+import type { IsoDate } from './core/dates'
 import { ru } from './i18n/ru'
+import { EventCard } from './ui/events/EventCard'
+import { EventList } from './ui/events/EventList'
 import { SemesterGrid } from './ui/grid/SemesterGrid'
 import { ScheduleBar } from './ui/schedules/ScheduleBar'
 import { ScheduleManager } from './ui/schedules/ScheduleManager'
 import { PaletteControls } from './ui/settings/PaletteControls'
 import { SemesterControls } from './ui/settings/SemesterControls'
 
+// Какая карточка открыта: новое событие (с датой или без) или существующее
+type CardState = { eventId: string | null; date: IsoDate | null } | null
+
 export function App() {
   const data = useAppData()
   const [today, setToday] = useState(todayIso)
+  const [card, setCard] = useState<CardState>(null)
 
   // Если страница простояла открытой до следующего дня, «сегодня» обновляется при возврате к ней
   useEffect(() => {
@@ -21,6 +28,10 @@ export function App() {
   }, [])
 
   const { active } = data
+  const events = active ? data.events.filter((e) => e.semesterId === active.id) : []
+  // Предметы демо не показываются в личном расписании, и наоборот
+  const subjects = active ? data.subjects.filter((s) => s.demo === active.isDemo) : []
+  const cardEvent = card?.eventId ? (events.find((e) => e.id === card.eventId) ?? null) : null
 
   return (
     <main>
@@ -62,7 +73,32 @@ export function App() {
             onWidthsChange={(columnWidths, monthColumnWidth) =>
               data.updateSemester(active.id, { columnWidths, monthColumnWidth })
             }
+            onCellDoubleClick={(date) => setCard({ eventId: null, date })}
           />
+          <EventList
+            events={events}
+            types={data.types}
+            levels={data.levels}
+            subjects={subjects}
+            onAdd={() => setCard({ eventId: null, date: null })}
+            onOpen={(id) => setCard({ eventId: id, date: null })}
+            onRestore={(id) => data.setEventArchived(id, false)}
+          />
+          {card && (card.eventId === null || cardEvent) && (
+            <EventCard
+              key={card.eventId ?? `new-${card.date ?? ''}`}
+              event={cardEvent}
+              defaultDate={card.date}
+              types={data.types}
+              levels={data.levels}
+              subjects={subjects}
+              onSave={(fields) => data.saveEvent(cardEvent, fields, active.id)}
+              onAddSubject={(name, shortName) => data.addSubject(name, shortName, active.isDemo)}
+              onArchive={() => cardEvent && data.setEventArchived(cardEvent.id, true)}
+              onDelete={() => cardEvent && data.deleteEvent(cardEvent.id)}
+              onClose={() => setCard(null)}
+            />
+          )}
         </>
       )}
     </main>

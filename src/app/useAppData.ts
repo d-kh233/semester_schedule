@@ -1,11 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { IsoDate } from '../core/dates'
 import {
-  createSemester,
-  pickActiveId,
-  sortSemesters,
-  type Semester,
-} from '../core/model'
+  createSubject,
+  sortLevels,
+  sortSubjects,
+  sortTypes,
+  type EventType,
+  type ImportanceLevel,
+  type Subject,
+} from '../core/catalog'
+import type { IsoDate } from '../core/dates'
+import { createEvent, type EventFields, type EventRecord } from '../core/events'
+import { createSemester, pickActiveId, sortSemesters, type Semester } from '../core/model'
+import { planSeed } from '../core/seed'
 import {
   defaultSemesterDates,
   defaultSettings,
@@ -14,13 +20,17 @@ import {
 } from '../core/settings'
 import { ru } from '../i18n/ru'
 import {
+  deleteEventForever,
   loadAll,
   openAppDb,
   putActiveSemesterId,
-  putInitialData,
+  putEvent,
+  putSeed,
   putSemester,
   putSettings,
+  putSubject,
   type AppDb,
+  type StoredData,
 } from '../storage/db'
 import { readLegacySettingsJson } from '../storage/localSettings'
 
@@ -31,6 +41,10 @@ interface State {
   semesters: Semester[]
   settings: Settings
   activeId: string | null
+  events: EventRecord[]
+  types: EventType[]
+  levels: ImportanceLevel[]
+  subjects: Subject[]
 }
 
 export type SemesterPatch = Partial<
@@ -76,12 +90,29 @@ function buildInitialData(): { semesters: Semester[]; settings: Settings; active
   return { semesters: [personal, demo], settings: legacy.settings, activeId: personal.id }
 }
 
+const EMPTY_STORED: StoredData = {
+  semesters: [],
+  settings: null,
+  activeSemesterId: null,
+  events: [],
+  types: [],
+  levels: [],
+  subjects: [],
+  catalogSeeded: false,
+  demoSeeded: false,
+  skippedRecords: 0,
+}
+
 export function useAppData() {
   const [state, setState] = useState<State>({
     ready: false,
     semesters: [],
     settings: defaultSettings,
     activeId: null,
+    events: [],
+    types: [],
+    levels: [],
+    subjects: [],
   })
   const [saveState, setSaveState] = useState<SaveState>('saved')
   const stateRef = useRef(state)
@@ -117,7 +148,7 @@ export function useAppData() {
     let cancelled = false
     void (async () => {
       let db: AppDb | null = null
-      let stored = null
+      let stored: StoredData | null = null
       try {
         db = await openAppDb()
         stored = await loadAll(db, nowIso())
@@ -130,19 +161,49 @@ export function useAppData() {
       if (cancelled) return
       dbRef.current = db
 
-      if (stored && stored.semesters.length > 0) {
-        apply({
-          ready: true,
-          semesters: sortSemesters(stored.semesters),
-          settings: stored.settings ?? defaultSettings,
-          activeId: pickActiveId(stored.semesters, stored.activeSemesterId),
-        })
-        if (!stored.settings) persist((d) => putSettings(d, defaultSettings))
-      } else {
-        const initial = buildInitialData()
-        apply({ ready: true, ...initial })
+      const data = stored ?? EMPTY_STORED
+      const firstRun = data.semesters.length === 0
+      const initial = firstRun ? buildInitialData() : null
+      const semesters = sortSemesters(initial?.semesters ?? data.semesters)
+      const settings = initial?.settings ?? data.settings ?? defaultSettings
+
+      const seed = planSeed({
+        semesters,
+        types: data.types,
+        levels: data.levels,
+        subjects: data.subjects,
+        events: data.events,
+        catalogSeeded: data.catalogSeeded,
+        demoSeeded: data.demoSeeded,
+        newId: () => crypto.randomUUID(),
+        now: nowIso(),
+      })
+
+      const next: State = {
+        ready: true,
+        semesters,
+        settings,
+        activeId: initial?.activeId ?? pickActiveId(semesters, data.activeSemesterId),
+        events: [...data.events, ...seed.events],
+        types: sortTypes([...data.types, ...seed.types]),
+        levels: sortLevels([...data.levels, ...seed.levels]),
+        subjects: sortSubjects([...data.subjects, ...seed.subjects]),
+      }
+      apply(next)
+
+      if (firstRun || seed.changed || (!firstRun && !data.settings)) {
         persist((d) =>
-          putInitialData(d, initial.semesters, initial.settings, initial.activeId),
+          putSeed(d, {
+            semesters: firstRun ? semesters : undefined,
+            settings: firstRun || !data.settings ? settings : undefined,
+            activeSemesterId: firstRun ? (initial?.activeId ?? undefined) : undefined,
+            types: seed.types,
+            levels: seed.levels,
+            subjects: seed.subjects,
+            events: seed.events,
+            catalogSeeded: seed.catalogSeeded,
+            demoSeeded: seed.demoSeeded,
+          }),
         )
       }
       setSaveState(failed.current ? 'error' : 'saved')
@@ -194,7 +255,11 @@ export function useAppData() {
         nowIso(),
       )
       const current = stateRef.current
-      apply({ ...current, semesters: [...current.semesters, created], activeId: created.id })
+      apply({
+        ...current,
+        semesters: sortSemesters([...current.semesters, created]),
+        activeId: created.id,
+      })
       persist(async (db) => {
         await putSemester(db, created)
         await putActiveSemesterId(db, created.id)
@@ -226,6 +291,56 @@ export function useAppData() {
     [updateSemester],
   )
 
+  // Новое событие (existing = null) или правка существующего. Дорожка и архив при правке сохраняются.
+  const saveEvent = useCallback(
+    (existing: EventRecord | null, fields: EventFields, semesterId: string) => {
+      const current = stateRef.current
+      const now = nowIso()
+      const saved: EventRecord = existing
+        ? { ...existing, ...fields, updatedAt: now }
+        : createEvent(fields, { id: crypto.randomUUID(), semesterId }, now)
+      const events = existing
+        ? current.events.map((e) => (e.id === saved.id ? saved : e))
+        : [...current.events, saved]
+      apply({ ...current, events })
+      persist((db) => putEvent(db, saved))
+    },
+    [apply, persist],
+  )
+
+  const setEventArchived = useCallback(
+    (id: string, archived: boolean) => {
+      const current = stateRef.current
+      const old = current.events.find((e) => e.id === id)
+      if (!old) return
+      const updated: EventRecord = { ...old, archived, updatedAt: nowIso() }
+      apply({ ...current, events: current.events.map((e) => (e.id === id ? updated : e)) })
+      persist((db) => putEvent(db, updated))
+    },
+    [apply, persist],
+  )
+
+  // Окончательное удаление: интерфейс вызывает только после явного подтверждения
+  const deleteEvent = useCallback(
+    (id: string) => {
+      const current = stateRef.current
+      apply({ ...current, events: current.events.filter((e) => e.id !== id) })
+      persist((db) => deleteEventForever(db, id))
+    },
+    [apply, persist],
+  )
+
+  const addSubject = useCallback(
+    (name: string, shortName: string, demo: boolean): Subject => {
+      const subject = createSubject({ name, shortName }, crypto.randomUUID(), demo)
+      const current = stateRef.current
+      apply({ ...current, subjects: sortSubjects([...current.subjects, subject]) })
+      persist((db) => putSubject(db, subject))
+      return subject
+    },
+    [apply, persist],
+  )
+
   const active = state.semesters.find((s) => s.id === state.activeId) ?? null
 
   return {
@@ -233,6 +348,10 @@ export function useAppData() {
     semesters: state.semesters,
     settings: state.settings,
     active,
+    events: state.events,
+    types: state.types,
+    levels: state.levels,
+    subjects: state.subjects,
     saveState,
     updateSemester,
     updateSettings,
@@ -240,5 +359,9 @@ export function useAppData() {
     addSchedule,
     archiveSchedule,
     restoreSchedule,
+    saveEvent,
+    setEventArchived,
+    deleteEvent,
+    addSubject,
   }
 }

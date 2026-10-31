@@ -23,6 +23,7 @@ interface Props {
   today: IsoDate
   onWeekNumberChange: (monday: IsoDate, number: number) => void
   onWidthsChange: (columnWidths: number[], monthColumnWidth: number) => void
+  onCellDoubleClick: (date: IsoDate) => void
 }
 
 interface Widths {
@@ -42,7 +43,14 @@ function cellClasses(day: CalendarDay, today: IsoDate, settings: Settings): stri
   return classes.join(' ')
 }
 
-export function SemesterGrid({ semester, settings, today, onWeekNumberChange, onWidthsChange }: Props) {
+export function SemesterGrid({
+  semester,
+  settings,
+  today,
+  onWeekNumberChange,
+  onWidthsChange,
+  onCellDoubleClick,
+}: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
   // Пока тянем границу, ширина меняется на экране, а сохраняется один раз в конце
   const [drag, setDrag] = useState<Widths | null>(null)
@@ -188,6 +196,9 @@ export function SemesterGrid({ semester, settings, today, onWeekNumberChange, on
                     className={`${cellClasses(day, today, settings)} cell--lane`}
                     style={{ gridRow: eventRow, gridColumn: day.day + 1 }}
                     data-testid={`cell-${month.key}-${day.day}`}
+                    onDoubleClick={() => {
+                      if (day.date !== null && day.status === 'normal') onCellDoubleClick(day.date)
+                    }}
                   >
                     {isMonday && day.date !== null && (
                       <WeekNumber

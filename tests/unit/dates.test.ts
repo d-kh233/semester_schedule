@@ -4,6 +4,7 @@ import {
   compareIsoDates,
   daysInMonth,
   diffDays,
+  formatDateRu,
   formatIsoDate,
   isLeapYear,
   isValidIsoDate,
@@ -112,5 +113,12 @@ describe('diffDays и compareIsoDates', () => {
     expect(compareIsoDates('2026-10-31', '2026-11-01')).toBeLessThan(0)
     expect(compareIsoDates('2027-01-01', '2026-12-31')).toBeGreaterThan(0)
     expect(compareIsoDates('2026-10-31', '2026-10-31')).toBe(0)
+  })
+})
+
+describe('formatDateRu', () => {
+  it('день.месяц.год с ведущими нулями', () => {
+    expect(formatDateRu('2026-10-21')).toBe('21.10.2026')
+    expect(formatDateRu('2027-01-05')).toBe('05.01.2027')
   })
 })
