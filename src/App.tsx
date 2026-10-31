@@ -7,6 +7,7 @@ import { ru } from './i18n/ru'
 import { EventCard } from './ui/events/EventCard'
 import { EventList } from './ui/events/EventList'
 import { SemesterGrid } from './ui/grid/SemesterGrid'
+import { QuickInput } from './ui/input/QuickInput'
 import { ScheduleBar } from './ui/schedules/ScheduleBar'
 import { ScheduleManager } from './ui/schedules/ScheduleManager'
 import { PaletteControls } from './ui/settings/PaletteControls'
@@ -46,6 +47,21 @@ export function App() {
             saveState={data.saveState}
             onSelect={data.setActive}
           />
+          <QuickInput
+            key={`input-${active.id}`}
+            today={today}
+            semesterId={active.id}
+            semesterStart={active.startDate}
+            semesterEnd={active.endDate}
+            levels={data.levels}
+            types={data.types}
+            subjects={subjects}
+            events={events}
+            onApply={data.applyEventChanges}
+            onRevert={data.revertEventChanges}
+            onAddSubject={(name, shortName) => data.addSubject(name, shortName, active.isDemo)}
+            onAddLevels={data.addImportanceLevels}
+          />
           <ScheduleManager
             semesters={data.semesters}
             onCreate={data.addSchedule}
@@ -54,7 +70,7 @@ export function App() {
             onRestore={data.restoreSchedule}
           />
           <SemesterControls
-            key={active.id}
+            key={`controls-${active.id}`}
             semester={active}
             settings={data.settings}
             onDatesChange={(startDate, endDate) =>

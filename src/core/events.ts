@@ -3,6 +3,13 @@
 import type { EventType, ImportanceLevel, Subject } from './catalog'
 import { compareIsoDates, isValidIsoDate, type IsoDate } from './dates'
 
+// Окно сдачи практики: одна из дат, когда её можно сдать
+export interface EventWindow {
+  startDate: IsoDate
+  endDate: IsoDate
+  planned: boolean
+}
+
 // Название EventRecord, чтобы не путать с браузерным Event
 export interface EventRecord {
   id: string
@@ -21,6 +28,8 @@ export interface EventRecord {
   note: string
   done: boolean
   archived: boolean
+  // Окна сдачи, если у практики их несколько; иначе пусто
+  windows: EventWindow[]
   createdAt: string
   updatedAt: string
 }
@@ -107,6 +116,7 @@ export function createEvent(
   fields: EventFields,
   ids: { id: string; semesterId: string },
   now: string,
+  windows: EventWindow[] = [],
 ): EventRecord {
   return {
     ...fields,
@@ -114,6 +124,7 @@ export function createEvent(
     semesterId: ids.semesterId,
     lane: null,
     archived: false,
+    windows,
     createdAt: now,
     updatedAt: now,
   }
@@ -151,6 +162,19 @@ export function compareEvents(a: EventRecord, b: EventRecord, types: EventType[]
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function parseWindows(value: unknown): EventWindow[] {
+  if (!Array.isArray(value)) return []
+  const windows: EventWindow[] = []
+  for (const raw of value) {
+    if (!isRecord(raw)) continue
+    const start = validDate(raw.startDate)
+    const end = validDate(raw.endDate)
+    if (start === null || end === null || compareIsoDates(end, start) < 0) continue
+    windows.push({ startDate: start, endDate: end, planned: raw.planned === true })
+  }
+  return windows
 }
 
 function validDate(value: unknown): IsoDate | null {
@@ -194,6 +218,7 @@ export function parseEvent(raw: unknown, fallbackNow: string): EventRecord | nul
     note: typeof raw.note === 'string' ? raw.note : '',
     done: raw.done === true,
     archived: raw.archived === true,
+    windows: parseWindows(raw.windows),
     createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : fallbackNow,
     updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : fallbackNow,
   }

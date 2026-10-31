@@ -190,3 +190,33 @@ export function parseSubject(raw: unknown): Subject | null {
     demo: raw.demo === true,
   }
 }
+
+// Практика — тип, у которого может быть несколько окон сдачи (по ключевому слову)
+export function isPracticeType(type: EventType | null): boolean {
+  return type?.keywords.includes('практика') ?? false
+}
+
+const MAX_LEVEL_NUMBER = 9
+const EXTRA_LEVEL_COLORS = ['#d9d9d9', '#bfbfbf', '#a6a6a6', '#8c8c8c', '#737373', '#595959']
+
+// Недостающие уровни до номера upTo, когда в строке ввода написали уровень, которого ещё нет.
+// Выше 9 уровни не создаются.
+export function buildLevelsUpTo(
+  levels: ImportanceLevel[],
+  upTo: number,
+  newId: () => string,
+): ImportanceLevel[] {
+  const highest = levels.reduce((max, l) => Math.max(max, l.number), 0)
+  if (upTo <= highest || upTo > MAX_LEVEL_NUMBER) return []
+  const added: ImportanceLevel[] = []
+  for (let number = highest + 1; number <= upTo; number++) {
+    added.push({
+      id: newId(),
+      number,
+      name: `Важность ${number}`,
+      color: EXTRA_LEVEL_COLORS[(number - 4) % EXTRA_LEVEL_COLORS.length] ?? FALLBACK_COLOR,
+      order: number,
+    })
+  }
+  return added
+}

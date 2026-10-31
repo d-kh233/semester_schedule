@@ -1,7 +1,7 @@
 import type { EventType, ImportanceLevel, Subject } from '../../core/catalog'
-import { formatDateRu } from '../../core/dates'
 import { compareEvents, eventColor, type EventRecord } from '../../core/events'
 import { ru } from '../../i18n/ru'
+import { dateText, windowsText } from './format'
 
 interface Props {
   events: EventRecord[]
@@ -11,14 +11,6 @@ interface Props {
   onAdd: () => void
   onOpen: (id: string) => void
   onRestore: (id: string) => void
-}
-
-function dateText(event: EventRecord): string {
-  if (event.startDate === null || event.endDate === null) return ru.events.noDate
-  const start = formatDateRu(event.startDate)
-  const end = formatDateRu(event.endDate)
-  const dates = start === end ? start : `${start} – ${end}`
-  return event.time ? `${dates} ${event.time}` : dates
 }
 
 // Временный список: показывает события, пока блоков в сетке нет
@@ -62,7 +54,9 @@ export function EventList({ events, types, levels, subjects, onAdd, onOpen, onRe
                   {event.title}
                 </button>
                 <span className="events__meta">
-                  {[subject?.name, type?.name, dateText(event)].filter(Boolean).join(' · ')}
+                  {[subject?.name, type?.name, dateText(event), windowsText(event)]
+                    .filter(Boolean)
+                    .join(' · ')}
                   {event.done ? ` · ${ru.events.done}` : ''}
                 </span>
               </li>

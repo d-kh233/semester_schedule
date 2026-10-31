@@ -51,6 +51,7 @@ function event(patch: Partial<EventRecord> = {}): EventRecord {
     note: '',
     done: false,
     archived: false,
+    windows: [],
     createdAt: NOW,
     updatedAt: NOW,
     ...patch,

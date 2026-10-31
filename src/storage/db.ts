@@ -124,6 +124,12 @@ export async function putSubject(db: AppDb, subject: Subject): Promise<void> {
   await db.put('subjects', subject)
 }
 
+export async function putLevels(db: AppDb, levels: ImportanceLevel[]): Promise<void> {
+  const tx = db.transaction('importanceLevels', 'readwrite')
+  for (const level of levels) void tx.store.put(level)
+  await tx.done
+}
+
 export interface SeedWrite {
   semesters?: Semester[]
   settings?: Settings

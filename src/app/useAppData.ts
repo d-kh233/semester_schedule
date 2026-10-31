@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
+  buildLevelsUpTo,
   createSubject,
   sortLevels,
   sortSubjects,
@@ -11,6 +12,7 @@ import {
 import type { IsoDate } from '../core/dates'
 import { createEvent, type EventFields, type EventRecord } from '../core/events'
 import { createSemester, pickActiveId, sortSemesters, type Semester } from '../core/model'
+import type { EventChange } from '../core/parser/apply'
 import { planSeed } from '../core/seed'
 import {
   defaultSemesterDates,
@@ -25,6 +27,7 @@ import {
   openAppDb,
   putActiveSemesterId,
   putEvent,
+  putLevels,
   putSeed,
   putSemester,
   putSettings,
@@ -341,6 +344,63 @@ export function useAppData() {
     [apply, persist],
   )
 
+  // Применяет изменения из строки ввода: создание и обновление событий одной операцией
+  const applyEventChanges = useCallback(
+    (changes: EventChange[]) => {
+      const current = stateRef.current
+      let events = current.events
+      for (const change of changes) {
+        events =
+          change.kind === 'create'
+            ? [...events, change.event]
+            : events.map((e) => (e.id === change.after.id ? change.after : e))
+      }
+      apply({ ...current, events })
+      persist(async (db) => {
+        for (const change of changes) {
+          await putEvent(db, change.kind === 'create' ? change.event : change.after)
+        }
+      })
+    },
+    [apply, persist],
+  )
+
+  // Отмена только что применённых изменений (кнопка «Отменить» в подсказке)
+  const revertEventChanges = useCallback(
+    (changes: EventChange[]) => {
+      const current = stateRef.current
+      let events = current.events
+      for (const change of changes) {
+        events =
+          change.kind === 'create'
+            ? events.filter((e) => e.id !== change.event.id)
+            : events.map((e) => (e.id === change.before.id ? change.before : e))
+      }
+      apply({ ...current, events })
+      persist(async (db) => {
+        for (const change of changes) {
+          if (change.kind === 'create') await deleteEventForever(db, change.event.id)
+          else await putEvent(db, change.before)
+        }
+      })
+    },
+    [apply, persist],
+  )
+
+  // Создаёт недостающие уровни важности до номера upTo; возвращает общее число уровней
+  const addImportanceLevels = useCallback(
+    (upTo: number): number => {
+      const current = stateRef.current
+      const added = buildLevelsUpTo(current.levels, upTo, () => crypto.randomUUID())
+      if (added.length === 0) return current.levels.length
+      const levels = sortLevels([...current.levels, ...added])
+      apply({ ...current, levels })
+      persist((db) => putLevels(db, added))
+      return levels.length
+    },
+    [apply, persist],
+  )
+
   const active = state.semesters.find((s) => s.id === state.activeId) ?? null
 
   return {
@@ -363,5 +423,8 @@ export function useAppData() {
     setEventArchived,
     deleteEvent,
     addSubject,
+    applyEventChanges,
+    revertEventChanges,
+    addImportanceLevels,
   }
 }
