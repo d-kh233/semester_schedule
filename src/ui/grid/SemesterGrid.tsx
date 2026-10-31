@@ -1,7 +1,11 @@
-import { useRef, useState, type CSSProperties, type PointerEvent } from 'react'
+import { useMemo, useRef, useState, type CSSProperties, type PointerEvent } from 'react'
 import { buildCalendar, getDayTiming, weekNumber, type CalendarDay } from '../../core/calendar'
+import type { EventType, ImportanceLevel } from '../../core/catalog'
 import { contrastText, weekdayColor } from '../../core/colors'
+import { DEFAULT_CROWDED_DAYS } from '../../core/crowded'
 import { parseIsoDate, type IsoDate } from '../../core/dates'
+import type { EventRecord } from '../../core/events'
+import { buildMonthLayouts } from '../../core/gridBlocks'
 import {
   DAYS_IN_ROW,
   DEFAULT_COLUMN_WIDTH,
@@ -14,6 +18,7 @@ import {
 } from '../../core/model'
 import type { Settings } from '../../core/settings'
 import { ru } from '../../i18n/ru'
+import { EventBlock } from './EventBlock'
 import { WeekNumber } from './WeekNumber'
 import './grid.css'
 
@@ -21,9 +26,15 @@ interface Props {
   semester: Semester
   settings: Settings
   today: IsoDate
+  // События этого расписания, у которых уже есть дорожки
+  events: EventRecord[]
+  types: EventType[]
+  levels: ImportanceLevel[]
   onWeekNumberChange: (monday: IsoDate, number: number) => void
   onWidthsChange: (columnWidths: number[], monthColumnWidth: number) => void
   onCellDoubleClick: (date: IsoDate) => void
+  onEventOpen: (eventId: string) => void
+  onResort: () => void
 }
 
 interface Widths {
@@ -47,16 +58,37 @@ export function SemesterGrid({
   semester,
   settings,
   today,
+  events,
+  types,
+  levels,
   onWeekNumberChange,
   onWidthsChange,
   onCellDoubleClick,
+  onEventOpen,
+  onResort,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
   // Пока тянем границу, ширина меняется на экране, а сохраняется один раз в конце
   const [drag, setDrag] = useState<Widths | null>(null)
+  const [confirmResort, setConfirmResort] = useState(false)
 
   const widths: Widths = drag ?? { columns: semester.columnWidths, month: semester.monthColumnWidth }
-  const months = buildCalendar(semester.startDate, semester.endDate)
+  const months = useMemo(
+    () => buildCalendar(semester.startDate, semester.endDate),
+    [semester.startDate, semester.endDate],
+  )
+  const layouts = useMemo(
+    () =>
+      buildMonthLayouts({ months, events, types, levels, today, crowdedDays: DEFAULT_CROWDED_DAYS }),
+    [months, events, types, levels, today],
+  )
+  // Первая строка сетки каждого месяца: строка дней недели, затем строки событий
+  const monthStarts: number[] = []
+  let nextRow = 2
+  for (const layout of layouts) {
+    monthStarts.push(nextRow)
+    nextRow += 1 + layout.rows
+  }
   const weekOne = resolveWeekOneMonday(semester)
   const todayDay = months.some((m) => m.days.some((d) => d.date === today))
     ? parseIsoDate(today).day
@@ -114,6 +146,27 @@ export function SemesterGrid({
         <button type="button" onClick={resetWidths}>
           {ru.grid.resetWidth}
         </button>
+        {confirmResort ? (
+          <span role="group" aria-label={ru.grid.resort} className="grid-toolbar__confirm">
+            {ru.grid.resortConfirm}
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmResort(false)
+                onResort()
+              }}
+            >
+              {ru.grid.resortYes}
+            </button>
+            <button type="button" onClick={() => setConfirmResort(false)}>
+              {ru.grid.resortNo}
+            </button>
+          </span>
+        ) : (
+          <button type="button" onClick={() => setConfirmResort(true)}>
+            {ru.grid.resort}
+          </button>
+        )}
       </div>
       <div className="grid-scroll" role="region" aria-label={ru.grid.label} ref={scrollRef}>
         <div className="grid" style={gridStyle}>
@@ -146,11 +199,13 @@ export function SemesterGrid({
 
           {months.map((month, index) => {
             // Как в таблице: строка дней недели стоит над строками своего месяца
-            const weekdayRow = 2 + index * 2
+            const weekdayRow = monthStarts[index] ?? 2
             const eventRow = weekdayRow + 1
+            const layout = layouts[index]
+            const rows = layout?.rows ?? 1
             const fill = settings.monthColors[month.month - 1] ?? '#dddddd'
             const monthStyle: CSSProperties = {
-              gridRow: eventRow,
+              gridRow: `${eventRow} / span ${rows}`,
               gridColumn: 1,
               background: fill,
               color: contrastText(fill),
@@ -188,28 +243,47 @@ export function SemesterGrid({
                   </div>
                 )
               }),
-              ...month.days.map((day) => {
-                const isMonday = day.date !== null && day.status === 'normal' && day.weekday === 0
-                return (
-                  <div
-                    key={`${month.key}-event-${day.day}`}
-                    className={`${cellClasses(day, today, settings)} cell--lane`}
-                    style={{ gridRow: eventRow, gridColumn: day.day + 1 }}
-                    data-testid={`cell-${month.key}-${day.day}`}
-                    onDoubleClick={() => {
-                      if (day.date !== null && day.status === 'normal') onCellDoubleClick(day.date)
-                    }}
-                  >
-                    {isMonday && day.date !== null && (
-                      <WeekNumber
-                        date={day.date}
-                        number={weekNumber(day.date, weekOne)}
-                        onChange={onWeekNumberChange}
-                      />
-                    )}
-                  </div>
-                )
-              }),
+              ...Array.from({ length: rows }, (_, lane) =>
+                month.days.map((day) => {
+                  // Номер недели стоит только в первой строке месяца
+                  const isMonday =
+                    lane === 0 && day.date !== null && day.status === 'normal' && day.weekday === 0
+                  const lastLane = lane === rows - 1
+                  return (
+                    <div
+                      key={`${month.key}-event-${lane}-${day.day}`}
+                      className={`${cellClasses(day, today, settings)} cell--lane${lastLane ? '' : ' cell--lane-inner'}`}
+                      style={{ gridRow: eventRow + lane, gridColumn: day.day + 1 }}
+                      data-testid={
+                        lane === 0
+                          ? `cell-${month.key}-${day.day}`
+                          : `cell-${month.key}-${day.day}-r${lane}`
+                      }
+                      onDoubleClick={() => {
+                        if (day.date !== null && day.status === 'normal') onCellDoubleClick(day.date)
+                      }}
+                    >
+                      {isMonday && day.date !== null && (
+                        <WeekNumber
+                          date={day.date}
+                          number={weekNumber(day.date, weekOne)}
+                          onChange={onWeekNumberChange}
+                        />
+                      )}
+                    </div>
+                  )
+                }),
+              ).flat(),
+              ...(layout?.blocks ?? []).map((block) => (
+                <EventBlock
+                  key={`${month.key}-${block.key}`}
+                  block={block}
+                  monthKey={month.key}
+                  firstRow={eventRow}
+                  mutePast={settings.mutePastDays}
+                  onOpen={onEventOpen}
+                />
+              )),
             ]
           })}
         </div>

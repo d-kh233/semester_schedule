@@ -11,6 +11,7 @@ import {
 } from '../core/catalog'
 import type { IsoDate } from '../core/dates'
 import { createEvent, type EventFields, type EventRecord } from '../core/events'
+import { placeLanes, resetLaneIfSpaceChanged } from '../core/layout'
 import { createSemester, pickActiveId, sortSemesters, type Semester } from '../core/model'
 import type { EventChange } from '../core/parser/apply'
 import { planSeed } from '../core/seed'
@@ -182,13 +183,19 @@ export function useAppData() {
         now: nowIso(),
       })
 
+      // События без дорожки (новые примеры демо, события из прежних версий) получают её здесь;
+      // уже расставленные не двигаются
+      const allTypes = sortTypes([...data.types, ...seed.types])
+      const placed = placeLanes([...data.events, ...seed.events], allTypes, nowIso())
+      const seedIds = new Set(seed.events.map((e) => e.id))
+
       const next: State = {
         ready: true,
         semesters,
         settings,
         activeId: initial?.activeId ?? pickActiveId(semesters, data.activeSemesterId),
-        events: [...data.events, ...seed.events],
-        types: sortTypes([...data.types, ...seed.types]),
+        events: placed.events,
+        types: allTypes,
         levels: sortLevels([...data.levels, ...seed.levels]),
         subjects: sortSubjects([...data.subjects, ...seed.subjects]),
       }
@@ -203,11 +210,17 @@ export function useAppData() {
             types: seed.types,
             levels: seed.levels,
             subjects: seed.subjects,
-            events: seed.events,
+            events: placed.events.filter((e) => seedIds.has(e.id)),
             catalogSeeded: seed.catalogSeeded,
             demoSeeded: seed.demoSeeded,
           }),
         )
+      }
+      const laneUpdates = placed.changed.filter((e) => !seedIds.has(e.id))
+      if (laneUpdates.length > 0) {
+        persist(async (d) => {
+          for (const event of laneUpdates) await putEvent(d, event)
+        })
       }
       setSaveState(failed.current ? 'error' : 'saved')
     })()
@@ -294,21 +307,38 @@ export function useAppData() {
     [updateSemester],
   )
 
+  // Единая точка изменения событий: расставляет дорожки (чужие не двигаются; touched уступают
+  // при столкновении), сохраняет изменённые и удаляет убранные. Дорожки меняются только у тех,
+  // у кого их не было или кто столкнулся (BR-5).
+  const commitEvents = useCallback(
+    (events: EventRecord[], touched: string[], removed: string[] = []) => {
+      const current = stateRef.current
+      const placed = placeLanes(events, current.types, nowIso(), { yieldIds: new Set(touched) })
+      apply({ ...current, events: placed.events })
+      const writeIds = new Set([...touched, ...placed.changed.map((e) => e.id)])
+      const toWrite = placed.events.filter((e) => writeIds.has(e.id))
+      persist(async (db) => {
+        for (const id of removed) await deleteEventForever(db, id)
+        for (const event of toWrite) await putEvent(db, event)
+      })
+    },
+    [apply, persist],
+  )
+
   // Новое событие (existing = null) или правка существующего. Дорожка и архив при правке сохраняются.
   const saveEvent = useCallback(
     (existing: EventRecord | null, fields: EventFields, semesterId: string) => {
       const current = stateRef.current
       const now = nowIso()
       const saved: EventRecord = existing
-        ? { ...existing, ...fields, updatedAt: now }
+        ? resetLaneIfSpaceChanged(existing, { ...existing, ...fields, updatedAt: now }, current.types)
         : createEvent(fields, { id: crypto.randomUUID(), semesterId }, now)
       const events = existing
         ? current.events.map((e) => (e.id === saved.id ? saved : e))
         : [...current.events, saved]
-      apply({ ...current, events })
-      persist((db) => putEvent(db, saved))
+      commitEvents(events, [saved.id])
     },
-    [apply, persist],
+    [commitEvents],
   )
 
   const setEventArchived = useCallback(
@@ -317,18 +347,39 @@ export function useAppData() {
       const old = current.events.find((e) => e.id === id)
       if (!old) return
       const updated: EventRecord = { ...old, archived, updatedAt: nowIso() }
-      apply({ ...current, events: current.events.map((e) => (e.id === id ? updated : e)) })
-      persist((db) => putEvent(db, updated))
+      commitEvents(
+        current.events.map((e) => (e.id === id ? updated : e)),
+        [id],
+      )
     },
-    [apply, persist],
+    [commitEvents],
   )
 
   // Окончательное удаление: интерфейс вызывает только после явного подтверждения
   const deleteEvent = useCallback(
     (id: string) => {
+      commitEvents(
+        stateRef.current.events.filter((e) => e.id !== id),
+        [],
+        [id],
+      )
+    },
+    [commitEvents],
+  )
+
+  // Кнопка «Пересортировать»: раскладка расписания заново по правилам 1–5 раздела 9 (BR-5)
+  const resortLanes = useCallback(
+    (semesterId: string) => {
       const current = stateRef.current
-      apply({ ...current, events: current.events.filter((e) => e.id !== id) })
-      persist((db) => deleteEventForever(db, id))
+      const placed = placeLanes(current.events, current.types, nowIso(), {
+        mode: 'resort',
+        semesterId,
+      })
+      if (placed.changed.length === 0) return
+      apply({ ...current, events: placed.events })
+      persist(async (db) => {
+        for (const event of placed.changed) await putEvent(db, event)
+      })
     },
     [apply, persist],
   )
@@ -349,20 +400,20 @@ export function useAppData() {
     (changes: EventChange[]) => {
       const current = stateRef.current
       let events = current.events
+      const touched: string[] = []
       for (const change of changes) {
-        events =
-          change.kind === 'create'
-            ? [...events, change.event]
-            : events.map((e) => (e.id === change.after.id ? change.after : e))
-      }
-      apply({ ...current, events })
-      persist(async (db) => {
-        for (const change of changes) {
-          await putEvent(db, change.kind === 'create' ? change.event : change.after)
+        if (change.kind === 'create') {
+          events = [...events, change.event]
+          touched.push(change.event.id)
+        } else {
+          const after = resetLaneIfSpaceChanged(change.before, change.after, current.types)
+          events = events.map((e) => (e.id === after.id ? after : e))
+          touched.push(after.id)
         }
-      })
+      }
+      commitEvents(events, touched)
     },
-    [apply, persist],
+    [commitEvents],
   )
 
   // Отмена только что применённых изменений (кнопка «Отменить» в подсказке)
@@ -370,21 +421,20 @@ export function useAppData() {
     (changes: EventChange[]) => {
       const current = stateRef.current
       let events = current.events
+      const touched: string[] = []
+      const removed: string[] = []
       for (const change of changes) {
-        events =
-          change.kind === 'create'
-            ? events.filter((e) => e.id !== change.event.id)
-            : events.map((e) => (e.id === change.before.id ? change.before : e))
-      }
-      apply({ ...current, events })
-      persist(async (db) => {
-        for (const change of changes) {
-          if (change.kind === 'create') await deleteEventForever(db, change.event.id)
-          else await putEvent(db, change.before)
+        if (change.kind === 'create') {
+          events = events.filter((e) => e.id !== change.event.id)
+          removed.push(change.event.id)
+        } else {
+          events = events.map((e) => (e.id === change.before.id ? change.before : e))
+          touched.push(change.before.id)
         }
-      })
+      }
+      commitEvents(events, touched, removed)
     },
-    [apply, persist],
+    [commitEvents],
   )
 
   // Создаёт недостающие уровни важности до номера upTo; возвращает общее число уровней
@@ -422,6 +472,7 @@ export function useAppData() {
     saveEvent,
     setEventArchived,
     deleteEvent,
+    resortLanes,
     addSubject,
     applyEventChanges,
     revertEventChanges,

@@ -146,8 +146,9 @@ export function eventColor(
   return type?.color ?? null
 }
 
-// Порядок: раньше дата конца, при равенстве важнее (1 выше 2, без важности ниже), затем раньше созданное
-export function compareEvents(a: EventRecord, b: EventRecord, types: EventType[]): number {
+// Порядок: раньше дата конца, при равенстве важнее (1 выше 2, без важности ниже), затем раньше созданное.
+// При полном равенстве 0: сортировка JS стабильна, значит остаётся порядок в списке (порядок ввода).
+export function compareEventsOrder(a: EventRecord, b: EventRecord, types: EventType[]): number {
   const typeOf = (e: EventRecord) => types.find((t) => t.id === e.typeId) ?? null
   if (a.endDate !== b.endDate) {
     if (a.endDate === null) return 1
@@ -157,7 +158,12 @@ export function compareEvents(a: EventRecord, b: EventRecord, types: EventType[]
   const ia = effectiveImportance(a, typeOf(a)) ?? Number.POSITIVE_INFINITY
   const ib = effectiveImportance(b, typeOf(b)) ?? Number.POSITIVE_INFINITY
   if (ia !== ib) return ia < ib ? -1 : 1
-  return a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id)
+  return a.createdAt.localeCompare(b.createdAt)
+}
+
+// То же, но полное равенство разрешается по id, чтобы порядок не зависел от входа (списки)
+export function compareEvents(a: EventRecord, b: EventRecord, types: EventType[]): number {
+  return compareEventsOrder(a, b, types) || a.id.localeCompare(b.id)
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

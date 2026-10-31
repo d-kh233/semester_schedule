@@ -83,6 +83,11 @@ export function App() {
             semester={active}
             settings={data.settings}
             today={today}
+            events={events}
+            types={data.types}
+            levels={data.levels}
+            onEventOpen={(id) => setCard({ eventId: id, date: null })}
+            onResort={() => data.resortLanes(active.id)}
             onWeekNumberChange={(monday, number) =>
               data.updateSemester(active.id, { weekOneMonday: weekOneMondayFor(monday, number) })
             }
