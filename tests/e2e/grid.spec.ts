@@ -104,3 +104,46 @@ test('снимок экрана для ручной проверки', async ({ 
   await openWithToday(page)
   await page.screenshot({ path: `test-results/grid-${testInfo.project.name}.png` })
 })
+
+test('как в таблице: строка дней недели над строками месяца, подпись месяца без года', async ({
+  page,
+}) => {
+  await openWithToday(page)
+  const weekdayBox = await page.getByTestId('weekday-2026-10-5').boundingBox()
+  const laneBox = await page.getByTestId('cell-2026-10-5').boundingBox()
+  expect(weekdayBox).not.toBeNull()
+  expect(laneBox).not.toBeNull()
+  expect(weekdayBox!.y).toBeLessThan(laneBox!.y)
+  await expect(page.getByTestId('month-2026-10')).toHaveText('Октябрь')
+})
+
+test('номера недель: маленькая цифра в понедельнике, первая неделя с первого понедельника', async ({
+  page,
+}) => {
+  await openWithToday(page)
+  await expect(page.getByTestId('weeknum-2026-09-07')).toHaveText('1')
+  await expect(page.getByTestId('weeknum-2026-09-14')).toHaveText('2')
+  await expect(page.getByTestId('weeknum-2026-10-26')).toHaveText('8')
+  // 01.09 вторник, 13.09 воскресенье: номеров нет
+  await expect(page.getByTestId('weeknum-2026-09-01')).toHaveCount(0)
+  await expect(page.getByTestId('weeknum-2026-09-13')).toHaveCount(0)
+})
+
+test('палитра настраивается: цвет месяца и градиент дней недели', async ({ page }) => {
+  await openWithToday(page)
+  await page.getByText('Палитра').click()
+  await page.getByLabel('Октябрь', { exact: true }).fill('#336699')
+  await expect(page.getByTestId('month-2026-10')).toHaveCSS('background-color', 'rgb(51, 102, 153)')
+
+  const before = await brightness(page, 'weekday-2026-10-28')
+  await page.getByLabel('Дни недели: светлый (среда)').fill('#000000')
+  const after = await brightness(page, 'weekday-2026-10-28')
+  expect(after).toBeLessThan(before)
+
+  await page.reload()
+  await expect(page.getByTestId('month-2026-10')).toHaveCSS('background-color', 'rgb(51, 102, 153)')
+
+  await page.getByText('Палитра').click()
+  await page.getByRole('button', { name: 'Вернуть цвета по умолчанию' }).click()
+  await expect(page.getByTestId('month-2026-10')).toHaveCSS('background-color', 'rgb(201, 154, 120)')
+})

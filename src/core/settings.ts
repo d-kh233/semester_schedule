@@ -19,20 +19,20 @@ export interface Settings {
 export const defaultSettings: Settings = {
   semesterStart: '2026-09-01',
   semesterEnd: '2027-01-31',
-  weekGradient: { light: '#f6eefb', dark: '#c4a3dc' },
+  weekGradient: { light: '#f8dfc8', dark: '#4a1824' },
   monthColors: [
-    '#bcd7ee', // январь
-    '#c9c4ee', // февраль
-    '#d8c0e8', // март
-    '#f0c1d9', // апрель
-    '#f5c6c0', // май
-    '#f8d3b0', // июнь
-    '#f6e3a4', // июль
-    '#d6e8a6', // август
-    '#b9e0b4', // сентябрь
-    '#f3cfa0', // октябрь
-    '#d9b8a0', // ноябрь
-    '#a9cbe8', // декабрь
+    '#9db4cf', // январь
+    '#a6a0cc', // февраль
+    '#b98fb5', // март
+    '#d4909f', // апрель
+    '#d98f7a', // май
+    '#e0a45e', // июнь
+    '#d8b84e', // июль
+    '#a9bf63', // август
+    '#d9b27c', // сентябрь
+    '#c99a78', // октябрь
+    '#a85a64', // ноябрь
+    '#7d3040', // декабрь
   ],
   mutePastDays: true,
   nonexistentDays: 'gray',

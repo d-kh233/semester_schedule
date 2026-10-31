@@ -28,6 +28,12 @@ export const ru = {
     nonexistentGray: 'Серые клетки',
     nonexistentHidden: 'Вне рамки календаря',
   },
+  palette: {
+    title: 'Палитра',
+    weekLight: 'Дни недели: светлый (среда)',
+    weekDark: 'Дни недели: тёмный (воскресенье, понедельник)',
+    reset: 'Вернуть цвета по умолчанию',
+  },
   semesterErrors: {
     'invalid-date': 'Укажите обе даты семестра.',
     'end-before-start': 'Конец семестра раньше начала.',

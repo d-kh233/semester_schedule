@@ -5,6 +5,7 @@ import type { Settings } from './core/settings'
 import { ru } from './i18n/ru'
 import { loadSettings, saveSettings } from './storage/localSettings'
 import { SemesterGrid } from './ui/grid/SemesterGrid'
+import { PaletteControls } from './ui/settings/PaletteControls'
 import { SemesterControls } from './ui/settings/SemesterControls'
 
 export function App() {
@@ -46,6 +47,7 @@ export function App() {
         onDatesChange={changeDates}
         onSettingsChange={changeSettings}
       />
+      <PaletteControls settings={settings} onSettingsChange={changeSettings} />
       <SemesterGrid settings={settings} today={today} />
     </main>
   )

@@ -1,7 +1,9 @@
 // Календарь семестра: месяцы, числа 1–31 и дни недели строятся по датам семестра
 
 import {
+  addDays,
   compareIsoDates,
+  diffDays,
   daysInMonth,
   formatIsoDate,
   isValidIsoDate,
@@ -79,4 +81,13 @@ export function getDayTiming(date: IsoDate, today: IsoDate): DayTiming {
   const order = compareIsoDates(date, today)
   if (order < 0) return 'past'
   return order === 0 ? 'today' : 'future'
+}
+
+// Номер учебной недели: неделя 1 начинается с первого понедельника на дату начала семестра или позже.
+// Дни до этого понедельника номера не имеют (null).
+export function weekNumber(date: IsoDate, semesterStart: IsoDate): number | null {
+  const firstMonday = addDays(semesterStart, (7 - weekday(semesterStart)) % 7)
+  const offset = diffDays(firstMonday, date)
+  if (offset < 0) return null
+  return Math.floor(offset / 7) + 1
 }

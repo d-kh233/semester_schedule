@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { isHexColor, mixHex, weekdayColor, weekdayWeight } from '../../src/core/colors'
+import {
+  contrastText,
+  isHexColor,
+  mixHex,
+  weekdayColor,
+  weekdayWeight,
+} from '../../src/core/colors'
 
 describe('isHexColor', () => {
   it('проверяет формат #rrggbb', () => {
@@ -57,5 +63,14 @@ describe('градиент дней недели (0 = понедельник)', 
   it('цвета градиента настраиваются', () => {
     const palette = { light: '#ffffff', dark: '#ff0000' }
     expect(weekdayColor(0, palette)).toBe('#ff0000')
+  })
+})
+
+describe('contrastText', () => {
+  it('на тёмной заливке текст светлый, на светлой тёмный', () => {
+    expect(contrastText('#000000')).toBe('#ffffff')
+    expect(contrastText('#7d3040')).toBe('#ffffff')
+    expect(contrastText('#ffffff')).toBe('#1f1f1f')
+    expect(contrastText('#f8dfc8')).toBe('#1f1f1f')
   })
 })

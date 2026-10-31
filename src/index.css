@@ -32,3 +32,25 @@ h1 {
   margin: 0;
   color: #b00020;
 }
+
+.palette {
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.palette summary {
+  cursor: pointer;
+}
+
+.palette__body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 8px 0;
+}
+
+.palette__body label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}

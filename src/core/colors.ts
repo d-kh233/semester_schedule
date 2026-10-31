@@ -44,3 +44,10 @@ export function weekdayWeight(weekdayIndex: number): number {
 export function weekdayColor(weekdayIndex: number, gradient: WeekGradient): string {
   return mixHex(gradient.light, gradient.dark, weekdayWeight(weekdayIndex))
 }
+
+// Цвет текста, читаемый на заливке: светлый на тёмной, тёмный на светлой
+export function contrastText(background: string): string {
+  const [r, g, b] = channels(background)
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+  return luminance < 0.55 ? '#ffffff' : '#1f1f1f'
+}

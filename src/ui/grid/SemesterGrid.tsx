@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
-import { buildCalendar, getDayTiming, type CalendarDay } from '../../core/calendar'
-import { weekdayColor } from '../../core/colors'
+import { buildCalendar, getDayTiming, weekNumber, type CalendarDay } from '../../core/calendar'
+import { contrastText, weekdayColor } from '../../core/colors'
 import { parseIsoDate, type IsoDate } from '../../core/dates'
 import type { Settings } from '../../core/settings'
 import { ru } from '../../i18n/ru'
@@ -45,40 +45,62 @@ export function SemesterGrid({ settings, today }: Props) {
         ))}
 
         {months.map((month, index) => {
-          const eventRow = 2 + index * 2
-          const weekdayRow = eventRow + 1
+          // Как в таблице: строка дней недели стоит над строками своего месяца
+          const weekdayRow = 2 + index * 2
+          const eventRow = weekdayRow + 1
+          const fill = settings.monthColors[month.month - 1] ?? '#dddddd'
           const monthStyle: CSSProperties = {
-            gridRow: `${eventRow} / span 2`,
+            gridRow: eventRow,
             gridColumn: 1,
-            background: settings.monthColors[month.month - 1],
+            background: fill,
+            color: contrastText(fill),
           }
           return [
+            <div
+              key={`${month.key}-gap`}
+              className="month-gap"
+              style={{ gridRow: weekdayRow, gridColumn: 1 }}
+            />,
             <div key={`${month.key}-label`} className="month" style={monthStyle} data-testid={`month-${month.key}`}>
-              <span className="month__name">{ru.months[month.month - 1]}</span>
-              <span className="month__year">{month.year}</span>
+              {ru.months[month.month - 1]}
             </div>,
-            ...month.days.map((day) => (
-              <div
-                key={`${month.key}-event-${day.day}`}
-                className={cellClasses(day, today, settings)}
-                style={{ gridRow: eventRow, gridColumn: day.day + 1 }}
-                data-testid={`cell-${month.key}-${day.day}`}
-              />
-            )),
             ...month.days.map((day) => {
-              const colored = day.date !== null && day.status === 'normal' && day.weekday !== null
-              const style: CSSProperties = { gridRow: weekdayRow, gridColumn: day.day + 1 }
-              if (colored && day.weekday !== null) {
-                style.background = weekdayColor(day.weekday, settings.weekGradient)
-              }
               return (
                 <div
                   key={`${month.key}-weekday-${day.day}`}
                   className={`${cellClasses(day, today, settings)} cell--weekday`}
-                  style={style}
+                  style={{
+                    gridRow: weekdayRow,
+                    gridColumn: day.day + 1,
+                    ...(day.date !== null && day.status === 'normal' && day.weekday !== null
+                      ? { background: weekdayColor(day.weekday, settings.weekGradient) }
+                      : {}),
+                  }}
                   data-testid={`weekday-${month.key}-${day.day}`}
                 >
-                  {colored && day.weekday !== null ? ru.weekdaysShort[day.weekday] : ''}
+                  {day.date !== null && day.status === 'normal' && day.weekday !== null
+                    ? ru.weekdaysShort[day.weekday]
+                    : ''}
+                </div>
+              )
+            }),
+            ...month.days.map((day) => {
+              const number =
+                day.date !== null && day.status === 'normal' && day.weekday === 0
+                  ? weekNumber(day.date, settings.semesterStart)
+                  : null
+              return (
+                <div
+                  key={`${month.key}-event-${day.day}`}
+                  className={`${cellClasses(day, today, settings)} cell--lane`}
+                  style={{ gridRow: eventRow, gridColumn: day.day + 1 }}
+                  data-testid={`cell-${month.key}-${day.day}`}
+                >
+                  {number !== null && day.date !== null && (
+                    <span className="weeknum" data-testid={`weeknum-${day.date}`}>
+                      {number}
+                    </span>
+                  )}
                 </div>
               )
             }),

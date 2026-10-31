@@ -6,8 +6,9 @@
 }
 
 .grid {
-  --cell-w: 30px;
-  --month-w: 96px;
+  --cell-w: 52px;
+  --month-w: 110px;
+  --lane-h: 56px;
   display: grid;
   grid-template-columns: var(--month-w) repeat(31, var(--cell-w));
   width: max-content;
@@ -16,21 +17,21 @@
 .head,
 .cell {
   box-sizing: border-box;
-  min-height: 30px;
   border-right: 1px solid #e3e3ea;
   border-bottom: 1px solid #e3e3ea;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
 }
 
 .head {
   position: sticky;
   top: 0;
   z-index: 2;
-  background: #f4f4f8;
-  font-weight: 600;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 6px;
+  background: #fbf3ee;
+  font-size: 12px;
 }
 
 .head--corner {
@@ -39,7 +40,16 @@
 }
 
 .head--today {
-  background: #ffd84d;
+  background: #c8dcf8;
+  font-weight: 700;
+}
+
+.month-gap {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #fff;
+  border-bottom: 1px solid #e3e3ea;
 }
 
 .month {
@@ -48,40 +58,51 @@
   z-index: 1;
   box-sizing: border-box;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 4px 8px;
-  border-right: 2px solid #b8b8c4;
-  border-bottom: 2px solid #b8b8c4;
-  font-weight: 600;
-}
-
-.month__year {
-  font-size: 11px;
-  font-weight: 400;
-  opacity: 0.7;
+  align-items: flex-end;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .cell--weekday {
+  height: 20px;
+  display: flex;
+  align-items: center;
+  padding-left: 4px;
   font-size: 11px;
+  border-right-color: rgba(255, 255, 255, 0.35);
+}
+
+.cell--lane {
+  position: relative;
+  min-height: var(--lane-h);
   border-bottom: 2px solid #b8b8c4;
+}
+
+.weeknum {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  font-size: 10px;
+  color: #777;
 }
 
 .cell--past {
   opacity: 0.45;
 }
 
-.cell--today {
-  box-shadow: inset 0 0 0 2px #e0a800;
-  background-color: #fff6cc;
+.cell--today.cell--lane {
+  background: #eef4ff;
+  box-shadow: inset 0 0 0 1px #4a86e8;
 }
 
 .cell--today.cell--weekday {
   font-weight: 700;
+  box-shadow: inset 0 0 0 2px #4a86e8;
 }
 
 .cell--blank-gray {
-  background: #d4d4da;
+  background: #8e8e93;
 }
 
 .cell--blank-hidden {

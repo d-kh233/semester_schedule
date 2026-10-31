@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { buildCalendar, getDayTiming, validateSemester } from '../../src/core/calendar'
+import {
+  buildCalendar,
+  getDayTiming,
+  validateSemester,
+  weekNumber,
+} from '../../src/core/calendar'
 
 // «Сегодня» во всех тестах задаётся явно
 const TODAY = '2026-10-31'
@@ -113,5 +118,37 @@ describe('getDayTiming', () => {
 
   it('через границу года', () => {
     expect(getDayTiming('2026-12-31', '2027-01-01')).toBe('past')
+  })
+})
+
+describe('weekNumber (неделя начинается с первого понедельника семестра)', () => {
+  const START = '2026-09-01' // вторник
+
+  it('первый понедельник семестра — неделя 1', () => {
+    expect(weekNumber('2026-09-07', START)).toBe(1)
+  })
+
+  it('следующие понедельники: 2, 3, ...', () => {
+    expect(weekNumber('2026-09-14', START)).toBe(2)
+    expect(weekNumber('2026-10-26', START)).toBe(8)
+  })
+
+  it('все дни недели относятся к одной неделе (вт-вс после понедельника)', () => {
+    expect(weekNumber('2026-09-13', START)).toBe(1)
+    expect(weekNumber('2026-09-14', START)).toBe(2)
+  })
+
+  it('дни до первого понедельника без номера', () => {
+    expect(weekNumber('2026-09-01', START)).toBeNull()
+    expect(weekNumber('2026-09-06', START)).toBeNull()
+  })
+
+  it('если семестр начался в понедельник, он сам неделя 1', () => {
+    expect(weekNumber('2026-09-07', '2026-09-07')).toBe(1)
+    expect(weekNumber('2026-09-14', '2026-09-07')).toBe(2)
+  })
+
+  it('через границу года', () => {
+    expect(weekNumber('2027-01-04', START)).toBe(18)
   })
 })
