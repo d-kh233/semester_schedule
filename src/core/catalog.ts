@@ -23,6 +23,8 @@ export interface EventType {
   showAtBottom: boolean
   // Порядок в списках выбора
   order: number
+  // Стандартный тип: нельзя удалить, только переименовать (см. catalogRules.ts)
+  builtIn: boolean
 }
 
 export interface Subject {
@@ -35,6 +37,9 @@ export interface Subject {
 }
 
 const FALLBACK_COLOR = '#cccccc'
+
+// Названия стандартных типов (для записей, сохранённых до появления флага builtIn)
+export const STANDARD_TYPE_NAMES = ['КР', 'Практика', 'Тест', 'Хакатон', 'Подготовка к экзаменам']
 
 export function buildDefaultCatalog(newId: () => string): {
   types: EventType[]
@@ -54,6 +59,7 @@ export function buildDefaultCatalog(newId: () => string): {
       color: null,
       showAtBottom: false,
       order: 1,
+      builtIn: true,
     },
     {
       id: newId(),
@@ -63,6 +69,7 @@ export function buildDefaultCatalog(newId: () => string): {
       color: null,
       showAtBottom: false,
       order: 2,
+      builtIn: true,
     },
     {
       id: newId(),
@@ -72,6 +79,7 @@ export function buildDefaultCatalog(newId: () => string): {
       color: null,
       showAtBottom: false,
       order: 3,
+      builtIn: true,
     },
     {
       id: newId(),
@@ -81,6 +89,7 @@ export function buildDefaultCatalog(newId: () => string): {
       color: '#f0a03c',
       showAtBottom: true,
       order: 4,
+      builtIn: true,
     },
     {
       id: newId(),
@@ -90,6 +99,7 @@ export function buildDefaultCatalog(newId: () => string): {
       color: '#d9c2a0',
       showAtBottom: true,
       order: 5,
+      builtIn: true,
     },
   ]
   return { types, levels }
@@ -159,6 +169,11 @@ export function parseEventType(raw: unknown): EventType | null {
     color: typeof raw.color === 'string' && isHexColor(raw.color) ? raw.color : null,
     showAtBottom: raw.showAtBottom === true,
     order: positiveInteger(raw.order) ? raw.order : 999,
+    // Старые записи без флага: стандартные типы узнаются по названию
+    builtIn:
+      typeof raw.builtIn === 'boolean'
+        ? raw.builtIn
+        : STANDARD_TYPE_NAMES.includes(raw.name),
   }
 }
 

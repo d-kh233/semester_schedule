@@ -96,7 +96,8 @@ export function withVariant(
   return { ...variant, todayColor: null, pastTextOpacity: current.pastTextOpacity }
 }
 
-// Уровни с цветами палитры (по порядку); уровень без цвета в палитре остаётся как был
+// Уровни с цветами палитры (по порядку номеров). Цвета привязаны к цифрам и не зависят от
+// направления важности (GC-16): цифра 1 всегда самая яркая. Уровень без цвета остаётся как был.
 export function paintLevels(levels: ImportanceLevel[], colors: readonly string[]): ImportanceLevel[] {
   const order = new Map(sortLevels(levels).map((l, i) => [l.id, i]))
   return levels.map((l) => ({ ...l, color: colors[order.get(l.id) ?? -1] ?? l.color }))

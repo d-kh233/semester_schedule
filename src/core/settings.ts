@@ -6,8 +6,21 @@ import { parseSavedPalettes, type SavedPalette } from './schedulePalette'
 import { validateSemester } from './calendar'
 import { isHexColor, type WeekGradient } from './colors'
 import { isValidIsoDate, type IsoDate } from './dates'
+import { DEFAULT_DIRECTION, type ImportanceDirection } from './importance'
 
 export type NonexistentDaysMode = 'gray' | 'hidden'
+
+// Как отмечается выполненное в сетке: приглушить или зачеркнуть (FR-24)
+export type DoneStyle = 'mute' | 'strike'
+
+export const MIN_CROWDED_DAYS = 1
+export const MAX_CROWDED_DAYS = 31
+export const DEFAULT_CROWDED_DAYS = 7
+
+export function clampCrowdedDays(value: number): number {
+  if (!Number.isFinite(value)) return DEFAULT_CROWDED_DAYS
+  return Math.min(MAX_CROWDED_DAYS, Math.max(MIN_CROWDED_DAYS, Math.round(value)))
+}
 
 export interface Settings {
   weekGradient: WeekGradient
@@ -21,6 +34,11 @@ export interface Settings {
   todayColor: string | null
   // Сохранённые палитры для повторного использования (общие для всех расписаний)
   savedPalettes: SavedPalette[]
+  // Сколько последних дней месяца считается людной неделей (BR-8)
+  crowdedDays: number
+  doneStyle: DoneStyle
+  // Какая цифра важности главнее (GC-16)
+  importanceDirection: ImportanceDirection
 }
 
 export const defaultSemesterDates = { start: '2026-09-01', end: '2027-01-31' } as const
@@ -46,6 +64,9 @@ export const defaultSettings: Settings = {
   paletteBases: ['#7d3040', '#e0a45e', '#9db4cf'],
   todayColor: null,
   savedPalettes: [],
+  crowdedDays: DEFAULT_CROWDED_DAYS,
+  doneStyle: 'mute',
+  importanceDirection: DEFAULT_DIRECTION,
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -98,6 +119,12 @@ export function parseSettings(data: unknown): Settings {
     todayColor:
       typeof data.todayColor === 'string' && isHexColor(data.todayColor) ? data.todayColor : null,
     savedPalettes: parseSavedPalettes(data.savedPalettes),
+    crowdedDays:
+      typeof data.crowdedDays === 'number'
+        ? clampCrowdedDays(data.crowdedDays)
+        : DEFAULT_CROWDED_DAYS,
+    doneStyle: data.doneStyle === 'strike' ? 'strike' : 'mute',
+    importanceDirection: data.importanceDirection === 'max' ? 'max' : DEFAULT_DIRECTION,
   }
 }
 

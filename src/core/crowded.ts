@@ -2,7 +2,7 @@
 
 import { daysInMonth, parseIsoDate, type IsoDate } from './dates'
 
-export const DEFAULT_CROWDED_DAYS = 7
+export { DEFAULT_CROWDED_DAYS } from './settings'
 
 export function isCrowdedDate(date: IsoDate, crowdedDays: number): boolean {
   if (crowdedDays <= 0) return false

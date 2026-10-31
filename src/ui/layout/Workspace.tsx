@@ -160,6 +160,15 @@ export function Workspace({
           settings={data.settings}
           palette={palette}
           levels={data.levels}
+          types={data.types}
+          catalog={{
+            onAddType: data.addType,
+            onUpdateType: data.updateType,
+            onDeleteType: data.deleteType,
+            onRenameLevel: data.renameLevel,
+            onDeleteLevel: data.deleteLevel,
+            onAddLevel: data.addImportanceLevels,
+          }}
           onDatesChange={(startDate, endDate) =>
             data.updateSemester(active.id, { startDate, endDate })
           }

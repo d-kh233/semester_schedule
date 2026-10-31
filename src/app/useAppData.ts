@@ -11,6 +11,7 @@ import {
 } from '../core/catalog'
 import type { IsoDate } from '../core/dates'
 import { createEvent, type EventFields, type EventRecord } from '../core/events'
+import { canDeleteLevel, canDeleteType, type DeleteBlock } from '../core/catalogRules'
 import { placeLanes, resetLaneIfSpaceChanged } from '../core/layout'
 import { createSemester, pickActiveId, sortSemesters, type Semester } from '../core/model'
 import type { EventChange } from '../core/parser/apply'
@@ -24,10 +25,13 @@ import {
 import { ru } from '../i18n/ru'
 import {
   deleteEventForever,
+  deleteEventTypeForever,
+  deleteLevelForever,
   loadAll,
   openAppDb,
   putActiveSemesterId,
   putEvent,
+  putEventType,
   putLevels,
   putSeed,
   putSemester,
@@ -39,6 +43,13 @@ import {
 import { readLegacySettingsJson } from '../storage/localSettings'
 
 export type SaveState = 'saved' | 'saving' | 'error'
+
+export interface TypeFields {
+  name: string
+  keywords: string[]
+  defaultImportance: number | null
+  showAtBottom: boolean
+}
 
 interface State {
   ready: boolean
@@ -453,6 +464,81 @@ export function useAppData() {
     [apply, persist],
   )
 
+  // Новый пользовательский тип (стандартные создаются только при первом запуске)
+  const addType = useCallback(
+    (fields: TypeFields): EventType => {
+      const current = stateRef.current
+      const order = current.types.reduce((max, t) => Math.max(max, t.order), 0) + 1
+      const type: EventType = {
+        id: crypto.randomUUID(),
+        name: fields.name.trim(),
+        keywords: fields.keywords,
+        defaultImportance: fields.defaultImportance,
+        color: null,
+        showAtBottom: fields.showAtBottom,
+        order,
+        builtIn: false,
+      }
+      apply({ ...current, types: sortTypes([...current.types, type]) })
+      persist((db) => putEventType(db, type))
+      return type
+    },
+    [apply, persist],
+  )
+
+  const updateType = useCallback(
+    (id: string, patch: Partial<TypeFields>) => {
+      const current = stateRef.current
+      const old = current.types.find((t) => t.id === id)
+      if (!old) return
+      const updated: EventType = { ...old, ...patch, name: (patch.name ?? old.name).trim() }
+      apply({ ...current, types: sortTypes(current.types.map((t) => (t.id === id ? updated : t))) })
+      persist((db) => putEventType(db, updated))
+    },
+    [apply, persist],
+  )
+
+  // Удаление только если тип свой и не используется; иначе возвращается причина
+  const deleteType = useCallback(
+    (id: string): DeleteBlock => {
+      const current = stateRef.current
+      const type = current.types.find((t) => t.id === id)
+      if (!type) return { ok: false, reason: 'in-use' }
+      const block = canDeleteType(type, current.events)
+      if (!block.ok) return block
+      apply({ ...current, types: current.types.filter((t) => t.id !== id) })
+      persist((db) => deleteEventTypeForever(db, id))
+      return block
+    },
+    [apply, persist],
+  )
+
+  const renameLevel = useCallback(
+    (id: string, name: string) => {
+      const current = stateRef.current
+      const old = current.levels.find((l) => l.id === id)
+      if (!old) return
+      const updated = { ...old, name: name.trim() }
+      apply({ ...current, levels: sortLevels(current.levels.map((l) => (l.id === id ? updated : l))) })
+      persist((db) => putLevels(db, [updated]))
+    },
+    [apply, persist],
+  )
+
+  const deleteLevel = useCallback(
+    (id: string): DeleteBlock => {
+      const current = stateRef.current
+      const level = current.levels.find((l) => l.id === id)
+      if (!level) return { ok: false, reason: 'in-use' }
+      const block = canDeleteLevel(level, current.events, current.types)
+      if (!block.ok) return block
+      apply({ ...current, levels: current.levels.filter((l) => l.id !== id) })
+      persist((db) => deleteLevelForever(db, id))
+      return block
+    },
+    [apply, persist],
+  )
+
   const active = state.semesters.find((s) => s.id === state.activeId) ?? null
 
   return {
@@ -479,5 +565,10 @@ export function useAppData() {
     applyEventChanges,
     revertEventChanges,
     addImportanceLevels,
+    addType,
+    updateType,
+    deleteType,
+    renameLevel,
+    deleteLevel,
   }
 }

@@ -124,6 +124,19 @@ export async function putSubject(db: AppDb, subject: Subject): Promise<void> {
   await db.put('subjects', subject)
 }
 
+// Удаление типа и уровня: вызывается только после проверки правил (catalogRules.ts) и подтверждения
+export async function putEventType(db: AppDb, type: EventType): Promise<void> {
+  await db.put('eventTypes', type)
+}
+
+export async function deleteEventTypeForever(db: AppDb, id: string): Promise<void> {
+  await db.delete('eventTypes', id)
+}
+
+export async function deleteLevelForever(db: AppDb, id: string): Promise<void> {
+  await db.delete('importanceLevels', id)
+}
+
 export async function putLevels(db: AppDb, levels: ImportanceLevel[]): Promise<void> {
   const tx = db.transaction('importanceLevels', 'readwrite')
   for (const level of levels) void tx.store.put(level)

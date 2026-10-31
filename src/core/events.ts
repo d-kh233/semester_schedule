@@ -2,6 +2,7 @@
 
 import type { EventType, ImportanceLevel, Subject } from './catalog'
 import { compareIsoDates, isValidIsoDate, type IsoDate } from './dates'
+import { DEFAULT_DIRECTION, importanceKey, type ImportanceDirection } from './importance'
 
 // Окно сдачи практики: одна из дат, когда её можно сдать
 export interface EventWindow {
@@ -148,22 +149,32 @@ export function eventColor(
 
 // Порядок: раньше дата конца, при равенстве важнее (1 выше 2, без важности ниже), затем раньше созданное.
 // При полном равенстве 0: сортировка JS стабильна, значит остаётся порядок в списке (порядок ввода).
-export function compareEventsOrder(a: EventRecord, b: EventRecord, types: EventType[]): number {
+export function compareEventsOrder(
+  a: EventRecord,
+  b: EventRecord,
+  types: EventType[],
+  direction: ImportanceDirection = DEFAULT_DIRECTION,
+): number {
   const typeOf = (e: EventRecord) => types.find((t) => t.id === e.typeId) ?? null
   if (a.endDate !== b.endDate) {
     if (a.endDate === null) return 1
     if (b.endDate === null) return -1
     return compareIsoDates(a.endDate, b.endDate)
   }
-  const ia = effectiveImportance(a, typeOf(a)) ?? Number.POSITIVE_INFINITY
-  const ib = effectiveImportance(b, typeOf(b)) ?? Number.POSITIVE_INFINITY
+  const ia = importanceKey(effectiveImportance(a, typeOf(a)), direction)
+  const ib = importanceKey(effectiveImportance(b, typeOf(b)), direction)
   if (ia !== ib) return ia < ib ? -1 : 1
   return a.createdAt.localeCompare(b.createdAt)
 }
 
 // То же, но полное равенство разрешается по id, чтобы порядок не зависел от входа (списки)
-export function compareEvents(a: EventRecord, b: EventRecord, types: EventType[]): number {
-  return compareEventsOrder(a, b, types) || a.id.localeCompare(b.id)
+export function compareEvents(
+  a: EventRecord,
+  b: EventRecord,
+  types: EventType[],
+  direction: ImportanceDirection = DEFAULT_DIRECTION,
+): number {
+  return compareEventsOrder(a, b, types, direction) || a.id.localeCompare(b.id)
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -1,10 +1,13 @@
 import type { Semester } from '../../core/model'
-import type { ImportanceLevel } from '../../core/catalog'
+import type { EventType, ImportanceLevel } from '../../core/catalog'
+import type { DeleteBlock } from '../../core/catalogRules'
+import type { TypeFields } from '../../app/useAppData'
 import type { SchedulePalette } from '../../core/schedulePalette'
 import type { Settings } from '../../core/settings'
 import { ru } from '../../i18n/ru'
 import { Modal } from '../common/Modal'
 import { ScheduleManager } from '../schedules/ScheduleManager'
+import { CatalogControls } from './CatalogControls'
 import { PaletteControls } from './PaletteControls'
 import { SemesterControls } from './SemesterControls'
 
@@ -14,6 +17,15 @@ interface Props {
   settings: Settings
   palette: SchedulePalette
   levels: ImportanceLevel[]
+  types: EventType[]
+  catalog: {
+    onAddType: (fields: TypeFields) => void
+    onUpdateType: (id: string, patch: Partial<TypeFields>) => void
+    onDeleteType: (id: string) => DeleteBlock
+    onRenameLevel: (id: string, name: string) => void
+    onDeleteLevel: (id: string) => DeleteBlock
+    onAddLevel: (upTo: number) => number
+  }
   onDatesChange: (start: string, end: string) => void
   onSettingsChange: (patch: Partial<Settings>) => void
   onPaletteChange: (palette: SchedulePalette) => void
@@ -48,6 +60,8 @@ export function SettingsDialog(props: Props) {
         onSettingsChange={props.onSettingsChange}
         onPaletteChange={props.onPaletteChange}
       />
+      <h3>{ru.catalog.title}</h3>
+      <CatalogControls types={props.types} levels={props.levels} {...props.catalog} />
       <h3>{ru.settings.schedulesTitle}</h3>
       <ScheduleManager
         semesters={props.semesters}

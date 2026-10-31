@@ -5,6 +5,7 @@
 import type { EventType } from './catalog'
 import { compareIsoDates, type IsoDate } from './dates'
 import { compareEventsOrder, type EventRecord } from './events'
+import type { ImportanceDirection } from './importance'
 
 export interface DateSpan {
   start: IsoDate
@@ -18,6 +19,8 @@ export interface PlaceOptions {
   semesterId?: string
   // События, которые уступают при столкновении сохранённых дорожек (только что изменённые)
   yieldIds?: ReadonlySet<string>
+  // Какая цифра важности главнее (GC-16); по умолчанию 1
+  direction?: ImportanceDirection
 }
 
 export interface PlaceResult {
@@ -69,11 +72,16 @@ function byCreated(a: EventRecord, b: EventRecord): number {
 }
 
 // Фоновые друг под другом по дате начала (п. 4), затем как остальные
-function compareBackground(a: EventRecord, b: EventRecord, types: EventType[]): number {
+function compareBackground(
+  a: EventRecord,
+  b: EventRecord,
+  types: EventType[],
+  direction: ImportanceDirection | undefined,
+): number {
   if (a.startDate !== b.startDate && a.startDate !== null && b.startDate !== null) {
     return compareIsoDates(a.startDate, b.startDate)
   }
-  return compareEventsOrder(a, b, types)
+  return compareEventsOrder(a, b, types, direction)
 }
 
 function placeSet(
@@ -108,8 +116,8 @@ function placeSet(
   }
 
   const compare = background
-    ? (a: EventRecord, b: EventRecord) => compareBackground(a, b, types)
-    : (a: EventRecord, b: EventRecord) => compareEventsOrder(a, b, types)
+    ? (a: EventRecord, b: EventRecord) => compareBackground(a, b, types, options.direction)
+    : (a: EventRecord, b: EventRecord) => compareEventsOrder(a, b, types, options.direction)
   for (const event of [...unplaced].sort(compare)) {
     const spans = eventSpans(event)
     const lane = occupancy.lowestFree(spans)

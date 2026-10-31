@@ -671,3 +671,60 @@ button.btn--active {
   margin: 0;
   border: 1px solid #e3e3ea;
 }
+
+/* Типы и уровни в настройках */
+.catalog__list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 8px;
+}
+
+.catalog__row,
+.catalog__add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #ececf1;
+}
+
+.catalog__row label,
+.catalog__add label {
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+}
+
+/* Галочка и её подпись в одну строку, а не столбиком */
+.catalog__row label:has(input[type='checkbox']),
+.catalog__add label:has(input[type='checkbox']) {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+.catalog__number {
+  font-weight: 600;
+  min-width: 18px;
+  align-self: center;
+}
+
+.catalog__note {
+  font-size: 12px;
+  color: #6b6b78;
+  align-self: center;
+}
+
+.catalog__confirm {
+  display: flex;
+  gap: 6px;
+  align-self: center;
+}
+
+.catalog__error {
+  flex-basis: 100%;
+  margin: 0;
+  color: #b3261e;
+  font-size: 13px;
+}
