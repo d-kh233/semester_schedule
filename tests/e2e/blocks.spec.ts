@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import { openList, openSettings } from './helpers.js'
+import { openGrid, openList, openSettings } from './helpers.js'
 
 // «Сегодня» подставляется явно: 31.10.2026 (суббота)
 async function open(page: Page) {
@@ -13,6 +13,7 @@ async function openDemo(page: Page) {
   await page.getByTestId('schedule-select').selectOption({ label: 'Демо (демо)' })
   await openList(page)
   await expect(page.getByTestId('event-list').getByRole('listitem')).toHaveCount(10)
+  await openGrid(page)
 }
 
 async function saved(page: Page) {
@@ -220,7 +221,6 @@ test('GC-8 на уровне раскладки: событие после ар�
   page,
 }) => {
   await open(page)
-  await openList(page)
   await enter(page, 'аа 21.10')
   await expect(page.locator('.block').filter({ hasText: 'аа' })).toHaveCount(1)
   await enter(page, 'бб 21.10')
@@ -233,7 +233,9 @@ test('GC-8 на уровне раскладки: событие после ар�
   await bb.dblclick()
   await page.getByRole('dialog').getByRole('button', { name: 'В архив' }).click()
   await expect(bb).toHaveCount(0)
+  await openList(page)
   await page.getByTestId('event-archive').getByRole('button', { name: 'Вернуть' }).click()
+  await openGrid(page)
   await expect(bb).toHaveCount(1)
   expect(await at(bb)).toBe(before)
   expect(await at(aa)).toBeLessThan(before)

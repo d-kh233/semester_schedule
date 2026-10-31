@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import { openList, reloadAndOpenList } from './helpers.js'
+import { openGrid, openList, reloadAndOpenList } from './helpers.js'
 
 // «Сегодня» подставляется явно: 31.10.2026
 async function open(page: Page) {
@@ -66,20 +66,24 @@ test('новое событие создаётся кнопкой, видно в
   await expect(row(page, 'Отчёт')).toHaveCount(0)
 })
 
-test('двойной щелчок по клетке открывает карточку с этой датой; по серой клетке не открывает', async ({
+test('щелчок по клетке даёт ввод в ячейке на её дату; по серой клетке не даёт', async ({
   page,
 }) => {
   await open(page)
-  await page.getByTestId('cell-2026-10-6').dblclick()
-  await expect(dialog(page)).toBeVisible()
-  await expect(dialog(page).getByLabel('Начало', { exact: true })).toHaveValue('2026-10-06')
-  await expect(dialog(page).getByLabel('Конец', { exact: true })).toHaveValue('2026-10-06')
-  await dialog(page).getByLabel('Название', { exact: true }).fill('Встреча')
-  await dialog(page).getByRole('button', { name: 'Сохранить' }).click()
+  await openGrid(page)
+  await page.getByTestId('cell-2026-10-6').click()
+  await expect(dialog(page)).toHaveCount(0)
+  const cellInput = page.getByTestId('cell-input').getByRole('textbox')
+  await expect(cellInput).toBeFocused()
+  await cellInput.fill('Встреча')
+  await cellInput.press('Enter')
+  await expect(page.getByTestId('cell-input')).toHaveCount(0)
+  await openList(page)
   await expect(row(page, 'Встреча')).toContainText('06.10.2026')
 
-  await page.getByTestId('cell-2026-11-31').dblclick()
-  await expect(dialog(page)).toHaveCount(0)
+  await openGrid(page)
+  await page.getByTestId('cell-2026-11-31').click()
+  await expect(page.getByTestId('cell-input')).toHaveCount(0)
 })
 
 test('цвет по важности: тип задаёт важность, ручная перебивает (BR-1, BR-2, BR-3)', async ({
@@ -313,12 +317,12 @@ test('база версии 1 (шаг 3а) обновляется до верс�
   await page.clock.install({ time: new Date('2026-10-31T12:00:00') })
   await page.goto('/')
   await expect(page.getByTestId('month-2027-02')).toBeVisible()
-  await openList(page)
   await expect(page.getByTestId('schedule-select').locator('option')).toHaveText([
     'Старое расписание',
   ])
   await expect(page.getByTestId('weeknum-2027-02-08')).toHaveText('1')
   expect((await page.getByTestId('head-5').boundingBox())?.width).toBe(40)
+  await openList(page)
 
   // Новые возможности работают на старой базе
   await addEvent(page, 'Новое дело', '2027-02-10')
@@ -326,5 +330,6 @@ test('база версии 1 (шаг 3а) обновляется до верс�
   await saved(page)
   await reloadAndOpenList(page)
   await expect(row(page, 'Новое дело')).toBeVisible()
+  await openGrid(page)
   await expect(page.getByTestId('weeknum-2027-02-08')).toHaveText('1')
 })

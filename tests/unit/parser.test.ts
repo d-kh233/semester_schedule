@@ -370,3 +370,52 @@ describe('порядок проверки ошибок', () => {
     expect(issueOf('')).toEqual({ kind: 'no-title' })
   })
 })
+
+describe('ввод в ячейку: дата ячейки всегда главная', () => {
+  const cell = { fixedDate: '2026-10-21' }
+
+  it('нет даты в тексте: событие на дату ячейки, цифра в начале это важность', () => {
+    const e = ok('1 КР матан', ctx, cell)
+    expect(e.startDate).toBe('2026-10-21')
+    expect(e.endDate).toBe('2026-10-21')
+    expect(e.importance).toBe(1)
+    expect(e.typeId).toBe(kr.id)
+    expect(e.subjectId).toBe(matan.id)
+    expect(e.title).toBe('Матан КР')
+  })
+
+  it('своя дата в тексте игнорируется', () => {
+    const e = ok('1 кр матан 25.10', ctx, cell)
+    expect(e.startDate).toBe('2026-10-21')
+    expect(e.endDate).toBe('2026-10-21')
+    expect(e.title).toBe('Матан КР')
+  })
+
+  it('цифра после даты в тексте остаётся важностью (BR-12)', () => {
+    expect(ok('матан кр 25.10 2', ctx, cell).importance).toBe(2)
+  })
+
+  it('неверная дата в тексте не мешает', () => {
+    expect(ok('матан кр 32.10', ctx, cell).startDate).toBe('2026-10-21')
+  })
+
+  it('период и список дат в тексте не создают окон и не дают ошибок', () => {
+    const e = ok('практика сиибд 10.11, 24.11', ctx, cell)
+    expect(e.startDate).toBe('2026-10-21')
+    expect(e.windows).toEqual([])
+  })
+
+  it('время в тексте сохраняется', () => {
+    expect(ok('англ тест 17:00', ctx, cell).time).toBe('17:00')
+  })
+
+  it('остальные ошибки работают как обычно', () => {
+    expect(issueOf('', ctx, cell)).toEqual({ kind: 'no-title' })
+    expect(issueOf('5 матан кр', ctx, cell)).toEqual({ kind: 'importance-out-of-range', value: 5 })
+    expect(issueOf('хим тест', ctx, cell)).toEqual({ kind: 'unknown-subject', word: 'хим' })
+  })
+
+  it('без fixedDate поведение прежнее: без даты — «Когда-нибудь»', () => {
+    expect(ok('тест физра').startDate).toBeNull()
+  })
+})

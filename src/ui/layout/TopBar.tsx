@@ -3,6 +3,8 @@ import type { SaveState } from '../../app/useAppData'
 import type { Semester } from '../../core/model'
 import { ru } from '../../i18n/ru'
 
+export type View = 'grid' | 'list'
+
 interface Props {
   semesters: Semester[]
   activeId: string
@@ -10,8 +12,8 @@ interface Props {
   onSelect: (id: string) => void
   onFit: () => void
   onResort: () => void
-  deadlinesOpen: boolean
-  onToggleDeadlines: () => void
+  view: View
+  onViewChange: (view: View) => void
   onOpenSettings: () => void
   // Строка ввода занимает всю ширину панели
   children: ReactNode
@@ -24,8 +26,8 @@ export function TopBar({
   onSelect,
   onFit,
   onResort,
-  deadlinesOpen,
-  onToggleDeadlines,
+  view,
+  onViewChange,
   onOpenSettings,
   children,
 }: Props) {
@@ -56,7 +58,7 @@ export function TopBar({
           {ru.save[saveState]}
         </span>
         <span className="topbar__spacer" />
-        {confirmResort ? (
+        {view === 'grid' && confirmResort ? (
           <span role="group" aria-label={ru.grid.resort} className="topbar__confirm">
             {ru.grid.resortConfirm}
             <button
@@ -75,25 +77,40 @@ export function TopBar({
           </span>
         ) : (
           <>
-            <button type="button" className="btn" onClick={onFit}>
-              {ru.grid.fitWidth}
-            </button>
-            <button type="button" className="btn" onClick={() => setConfirmResort(true)}>
-              {ru.grid.resort}
-            </button>
-            <button
-              type="button"
-              className={deadlinesOpen ? 'btn btn--active' : 'btn'}
-              aria-pressed={deadlinesOpen}
-              onClick={onToggleDeadlines}
-            >
-              {ru.topbar.deadlines}
-            </button>
+            {view === 'grid' && (
+              <>
+                <button type="button" className="btn" onClick={onFit}>
+                  {ru.grid.fitWidth}
+                </button>
+                <button type="button" className="btn" onClick={() => setConfirmResort(true)}>
+                  {ru.grid.resort}
+                </button>
+              </>
+            )}
             <button type="button" className="btn" onClick={onOpenSettings}>
               {ru.topbar.settings}
             </button>
           </>
         )}
+      </div>
+      <div className="tabs" role="tablist" aria-label={ru.topbar.tabs}>
+        {(
+          [
+            ['grid', ru.topbar.gridTab],
+            ['list', ru.topbar.deadlines],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={view === id}
+            className={view === id ? 'tab tab--active' : 'tab'}
+            onClick={() => onViewChange(id)}
+          >
+            {label}
+          </button>
+        ))}
       </div>
       {children}
     </header>

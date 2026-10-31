@@ -1,14 +1,16 @@
 import { expect, type Page } from '@playwright/test'
 
-// Боковая панель «Список дедлайнов»: открывается кнопкой в верхней панели
-export const deadlinesPanel = (page: Page) =>
-  page.getByRole('complementary', { name: 'Список дедлайнов' })
+// Страница «Список дедлайнов»: открывается вкладкой в верхней панели
+export const deadlinesPanel = (page: Page) => page.getByRole('region', { name: 'Список дедлайнов' })
 
 export async function openList(page: Page) {
-  if (!(await deadlinesPanel(page).isVisible())) {
-    await page.getByRole('button', { name: 'Список дедлайнов' }).click()
-  }
+  await page.getByRole('tab', { name: 'Список дедлайнов' }).click()
   await expect(deadlinesPanel(page)).toBeVisible()
+}
+
+export async function openGrid(page: Page) {
+  await page.getByRole('tab', { name: 'Сетка' }).click()
+  await expect(page.getByRole('region', { name: 'Сетка семестра' })).toBeVisible()
 }
 
 export async function reloadAndOpenList(page: Page) {

@@ -19,6 +19,8 @@ export const ru = {
   weekdaysShort: ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'],
   loading: 'Загрузка…',
   topbar: {
+    tabs: 'Режимы',
+    gridTab: 'Сетка',
     deadlines: 'Список дедлайнов',
     settings: 'Настройки',
   },
@@ -31,7 +33,6 @@ export const ru = {
   deadlines: {
     title: 'Список дедлайнов',
     untilEnd: 'Задания до конца семестра',
-    close: 'Закрыть',
   },
   grid: {
     label: 'Сетка семестра',
@@ -91,6 +92,9 @@ export const ru = {
     label: 'Строка ввода',
     placeholder: 'Например: 1 матан кр 21.10 — и Enter. Несколько событий через «;» или с новой строки.',
     hint: 'Enter — добавить, Shift+Enter — новая строка.',
+    cellLabel: 'Ввод в ячейку',
+    cellPlaceholder: '1 матан кр',
+    cellHint: 'Enter — сохранить, Esc — отмена. Дата — этой ячейки.',
     ok: 'ок',
     cancel: 'Отмена',
     undo: 'Отменить',

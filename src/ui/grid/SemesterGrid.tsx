@@ -16,6 +16,8 @@ import {
 } from '../../core/model'
 import type { Settings } from '../../core/settings'
 import { ru } from '../../i18n/ru'
+import { CellInput } from '../input/CellInput'
+import type { InputEngine } from '../input/useInputEngine'
 import { EventBlock } from './EventBlock'
 import { WeekNumber } from './WeekNumber'
 import './grid.css'
@@ -33,7 +35,8 @@ interface Props {
   scrollRef: RefObject<HTMLDivElement | null>
   onWeekNumberChange: (monday: IsoDate, number: number) => void
   onWidthsChange: (columnWidths: number[], monthColumnWidth: number) => void
-  onCellDoubleClick: (date: IsoDate) => void
+  // Быстрый ввод в ячейке (щелчок по пустой ячейке)
+  engine: InputEngine
   onEventOpen: (eventId: string) => void
 }
 
@@ -65,11 +68,13 @@ export function SemesterGrid({
   scrollRef,
   onWeekNumberChange,
   onWidthsChange,
-  onCellDoubleClick,
+  engine,
   onEventOpen,
 }: Props) {
   // Пока тянем границу, ширина меняется на экране, а сохраняется один раз в конце
   const [drag, setDrag] = useState<Widths | null>(null)
+  // Ячейка с открытым полем ввода: ключ однозначно задаёт строку и день
+  const [editing, setEditing] = useState<{ key: string; date: IsoDate } | null>(null)
 
   const widths: Widths = drag ?? { columns: semester.columnWidths, month: semester.monthColumnWidth }
   const months = useMemo(
@@ -217,6 +222,8 @@ export function SemesterGrid({
                   const isMonday =
                     lane === 0 && day.date !== null && day.status === 'normal' && day.weekday === 0
                   const lastLane = lane === rows - 1
+                  const cellKey = `${month.key}-${day.day}-${lane}`
+                  const cellDate = day.date !== null && day.status === 'normal' ? day.date : null
                   return (
                     <div
                       key={`${month.key}-event-${lane}-${day.day}`}
@@ -227,10 +234,21 @@ export function SemesterGrid({
                           ? `cell-${month.key}-${day.day}`
                           : `cell-${month.key}-${day.day}-r${lane}`
                       }
-                      onDoubleClick={() => {
-                        if (day.date !== null && day.status === 'normal') onCellDoubleClick(day.date)
+                      onClick={(e) => {
+                        // Клик по номеру недели правит номер, а не открывает ввод
+                        if (cellDate !== null && !(e.target as HTMLElement).closest('.weeknum')) {
+                          setEditing({ key: cellKey, date: cellDate })
+                        }
                       }}
                     >
+                      {editing?.key === cellKey && cellDate !== null && (
+                        <CellInput
+                          date={cellDate}
+                          engine={engine}
+                          alignRight={day.day > 20}
+                          onClose={() => setEditing(null)}
+                        />
+                      )}
                       {isMonday && day.date !== null && (
                         <WeekNumber
                           date={day.date}

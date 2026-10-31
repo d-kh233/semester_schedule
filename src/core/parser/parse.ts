@@ -23,6 +23,8 @@ export interface ParseOptions {
   acceptUnknownSubject?: boolean
   // Выбранный уровень вместо несуществующего
   importance?: number
+  // Ввод в ячейку: событие всегда на этот день, даты в тексте разбираются, но не используются
+  fixedDate?: IsoDate
 }
 
 export interface ParsedWindow {
@@ -236,6 +238,14 @@ export function parseInputLine(
       end: swap ? start : end,
       reversed: reversed && !swap,
     })
+  }
+
+  // Дата ячейки сильнее текста (ответ заказчицы 1.11.2026)
+  if (options.fixedDate !== undefined) {
+    invalidDate = null
+    separateGroups = false
+    ranges.length = 0
+    ranges.push({ start: options.fixedDate, end: options.fixedDate, reversed: false })
   }
 
   // Ошибки по порядку: сначала неисправимые, потом вопросы к пользователю
