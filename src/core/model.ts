@@ -3,6 +3,7 @@
 
 import { firstMondayOnOrAfter, validateSemester } from './calendar'
 import { isValidIsoDate, weekday, type IsoDate } from './dates'
+import { parseHiddenMonths } from './hiddenMonths'
 
 export const DAYS_IN_ROW = 31
 export const DEFAULT_COLUMN_WIDTH = 52
@@ -24,6 +25,8 @@ export interface Semester {
   // Ширина 31 столбца чисел и колонки месяцев, пиксели
   columnWidths: number[]
   monthColumnWidth: number
+  // Скрытые в сетке месяцы («ГГГГ-ММ»); события остаются в базе
+  hiddenMonths: string[]
   isDemo: boolean
   archived: boolean
   createdAt: string
@@ -65,6 +68,7 @@ export function createSemester(input: NewSemesterInput, now: string): Semester {
     weekOneMonday: null,
     columnWidths: Array<number>(DAYS_IN_ROW).fill(DEFAULT_COLUMN_WIDTH),
     monthColumnWidth: DEFAULT_MONTH_COLUMN_WIDTH,
+    hiddenMonths: [],
     isDemo: input.isDemo ?? false,
     archived: false,
     createdAt: now,
@@ -107,6 +111,7 @@ export function parseSemester(raw: unknown, fallbackNow: string): Semester | nul
       typeof raw.monthColumnWidth === 'number'
         ? clampMonthColumnWidth(raw.monthColumnWidth)
         : DEFAULT_MONTH_COLUMN_WIDTH,
+    hiddenMonths: parseHiddenMonths(raw.hiddenMonths),
     isDemo: raw.isDemo === true,
     archived: raw.archived === true,
     createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : fallbackNow,

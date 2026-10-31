@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import type { useAppData } from '../../app/useAppData'
-import { weekOneMondayFor } from '../../core/calendar'
+import { buildCalendar, weekOneMondayFor } from '../../core/calendar'
+import { countHiddenMonths } from '../../core/hiddenMonths'
 import type { IsoDate } from '../../core/dates'
 import {
   DAYS_IN_ROW,
@@ -89,6 +90,11 @@ export function Workspace({
         onSelect={data.setActive}
         onFit={fitToWindow}
         onResort={() => data.resortLanes(active.id)}
+        hiddenCount={countHiddenMonths(
+          buildCalendar(active.startDate, active.endDate),
+          active.hiddenMonths,
+        )}
+        onShowAllMonths={() => data.updateSemester(active.id, { hiddenMonths: [] })}
         view={view}
         onViewChange={onViewChange}
         onOpenSettings={() => onSettingsOpenChange(true)}
@@ -111,6 +117,9 @@ export function Workspace({
             onEventOpen={(id) => setCard({ eventId: id, date: null })}
             onWeekNumberChange={(monday, number) =>
               data.updateSemester(active.id, { weekOneMonday: weekOneMondayFor(monday, number) })
+            }
+            onHiddenMonthsChange={(hiddenMonths) =>
+              data.updateSemester(active.id, { hiddenMonths })
             }
             onWidthsChange={(columnWidths, monthColumnWidth) =>
               data.updateSemester(active.id, { columnWidths, monthColumnWidth })

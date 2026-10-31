@@ -70,6 +70,35 @@
   font-weight: 500;
 }
 
+/* Кнопка «скрыть месяц»: тихая, видна всегда, ярче при наведении */
+.month__hide {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.45;
+  cursor: pointer;
+}
+
+/* Крестик рисуется стилем, чтобы не попадать в текст подписи месяца */
+.month__hide::before {
+  content: '×';
+}
+
+.month__hide:hover,
+.month__hide:focus-visible {
+  opacity: 1;
+  background: rgba(128, 128, 128, 0.3);
+}
+
 .cell--weekday {
   height: 20px;
   display: flex;

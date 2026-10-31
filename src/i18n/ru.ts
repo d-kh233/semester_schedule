@@ -40,6 +40,8 @@ export const ru = {
     resetWidth: 'Сбросить ширину',
     weekNumberEdit: 'Номер недели',
     resizeColumn: 'Изменить ширину столбца',
+    hideMonth: 'Скрыть месяц',
+    showAllMonths: 'Показать всё',
     resort: 'Пересортировать',
     resortConfirm: 'Расставить все события по строкам заново? Текущее расположение изменится.',
     resortYes: 'Да, пересортировать',

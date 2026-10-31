@@ -51,3 +51,8 @@ export function contrastText(background: string): string {
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
   return luminance < 0.55 ? '#ffffff' : '#1f1f1f'
 }
+
+// Цвет текста дня недели по цвету его заливки из градиента
+export function weekdayTextColor(weekdayIndex: number, gradient: WeekGradient): string {
+  return contrastText(weekdayColor(weekdayIndex, gradient))
+}

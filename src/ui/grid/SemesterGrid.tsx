@@ -1,7 +1,8 @@
 import { useMemo, useState, type CSSProperties, type PointerEvent, type RefObject } from 'react'
 import { buildCalendar, getDayTiming, weekNumber, type CalendarDay } from '../../core/calendar'
 import type { EventType, ImportanceLevel, Subject } from '../../core/catalog'
-import { contrastText, weekdayColor } from '../../core/colors'
+import { contrastText, weekdayColor, weekdayTextColor } from '../../core/colors'
+import { toggleHiddenMonth, visibleMonths } from '../../core/hiddenMonths'
 import { DEFAULT_CROWDED_DAYS } from '../../core/crowded'
 import { parseIsoDate, type IsoDate } from '../../core/dates'
 import type { EventRecord } from '../../core/events'
@@ -35,6 +36,7 @@ interface Props {
   scrollRef: RefObject<HTMLDivElement | null>
   onWeekNumberChange: (monday: IsoDate, number: number) => void
   onWidthsChange: (columnWidths: number[], monthColumnWidth: number) => void
+  onHiddenMonthsChange: (hiddenMonths: string[]) => void
   // Быстрый ввод в ячейке (щелчок по пустой ячейке)
   engine: InputEngine
   onEventOpen: (eventId: string) => void
@@ -68,6 +70,7 @@ export function SemesterGrid({
   scrollRef,
   onWeekNumberChange,
   onWidthsChange,
+  onHiddenMonthsChange,
   engine,
   onEventOpen,
 }: Props) {
@@ -77,14 +80,15 @@ export function SemesterGrid({
   const [editing, setEditing] = useState<{ key: string; date: IsoDate } | null>(null)
 
   const widths: Widths = drag ?? { columns: semester.columnWidths, month: semester.monthColumnWidth }
-  const months = useMemo(
+  const allMonths = useMemo(
     () => buildCalendar(semester.startDate, semester.endDate),
     [semester.startDate, semester.endDate],
   )
-  const layouts = useMemo(
+  // Раскладка считается по всем месяцам, чтобы скрытие не меняло дорожки; рисуются только видимые
+  const allLayouts = useMemo(
     () =>
       buildMonthLayouts({
-        months,
+        months: allMonths,
         events,
         types,
         levels,
@@ -92,8 +96,10 @@ export function SemesterGrid({
         today,
         crowdedDays: DEFAULT_CROWDED_DAYS,
       }),
-    [months, events, types, levels, subjects, today],
+    [allMonths, events, types, levels, subjects, today],
   )
+  const months = visibleMonths(allMonths, semester.hiddenMonths)
+  const layouts = allLayouts.filter((_, i) => !semester.hiddenMonths.includes(allMonths[i]?.key ?? ''))
   // Первая строка сетки каждого месяца: строка дней недели, затем строки событий
   const monthStarts: number[] = []
   let nextRow = 2
@@ -196,6 +202,16 @@ export function SemesterGrid({
                 data-testid={`month-${month.key}`}
               >
                 {ru.months[month.month - 1]}
+                <button
+                  type="button"
+                  className="month__hide"
+                  aria-label={`${ru.grid.hideMonth}: ${ru.months[month.month - 1] ?? ''}`}
+                  title={ru.grid.hideMonth}
+                  data-testid={`hide-${month.key}`}
+                  onClick={() =>
+                    onHiddenMonthsChange(toggleHiddenMonth(semester.hiddenMonths, month.key))
+                  }
+                />
               </div>,
               ...month.days.map((day) => {
                 const shown = day.date !== null && day.status === 'normal' && day.weekday !== null
@@ -207,7 +223,10 @@ export function SemesterGrid({
                       gridRow: weekdayRow,
                       gridColumn: day.day + 1,
                       ...(shown && day.weekday !== null
-                        ? { background: weekdayColor(day.weekday, settings.weekGradient) }
+                        ? {
+                            background: weekdayColor(day.weekday, settings.weekGradient),
+                            color: weekdayTextColor(day.weekday, settings.weekGradient),
+                          }
                         : {}),
                     }}
                     data-testid={`weekday-${month.key}-${day.day}`}

@@ -60,6 +60,7 @@ export type SemesterPatch = Partial<
     | 'weekOneMonday'
     | 'columnWidths'
     | 'monthColumnWidth'
+    | 'hiddenMonths'
     | 'archived'
   >
 >

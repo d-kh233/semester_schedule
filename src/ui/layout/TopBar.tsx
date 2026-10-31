@@ -12,6 +12,9 @@ interface Props {
   onSelect: (id: string) => void
   onFit: () => void
   onResort: () => void
+  // Сколько месяцев скрыто в сетке; кнопка «Показать всё» видна, только если есть скрытые
+  hiddenCount: number
+  onShowAllMonths: () => void
   view: View
   onViewChange: (view: View) => void
   onOpenSettings: () => void
@@ -26,6 +29,8 @@ export function TopBar({
   onSelect,
   onFit,
   onResort,
+  hiddenCount,
+  onShowAllMonths,
   view,
   onViewChange,
   onOpenSettings,
@@ -82,6 +87,16 @@ export function TopBar({
                 <button type="button" className="btn" onClick={onFit}>
                   {ru.grid.fitWidth}
                 </button>
+                {hiddenCount > 0 && (
+                  <button
+                    type="button"
+                    className="btn"
+                    data-testid="show-all-months"
+                    onClick={onShowAllMonths}
+                  >
+                    {`${ru.grid.showAllMonths} (${hiddenCount})`}
+                  </button>
+                )}
                 <button type="button" className="btn" onClick={() => setConfirmResort(true)}>
                   {ru.grid.resort}
                 </button>
