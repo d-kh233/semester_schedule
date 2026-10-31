@@ -2,7 +2,7 @@
 // по сезонам, цвета уровней важности, градиент дней недели). Ничего не применяется само:
 // вариант выбирает пользователь (BR-11).
 
-import { hexToHsl, hslToHex, isHexColor, type WeekGradient } from './colors'
+import { hexToHsl, hslToHex, isHexColor, mixHex, type WeekGradient } from './colors'
 
 export const MIN_BASE_COLORS = 3
 export const MAX_BASE_COLORS = 7
@@ -67,15 +67,39 @@ function levelColors(base: string, count: number): string[] {
   })
 }
 
-function weekGradient(base: string): WeekGradient {
-  const [hue] = hexToHsl(base)
-  return {
-    light: hslToHex(hue, saturationOf(base, 0.25, 0.6), 0.88),
-    dark: hslToHex(hue, saturationOf(base, 0.3, 0.7), 0.24),
-  }
+// Опорные дни недели (0 = пн ... 6 = вс) для 3–7 базовых цветов. Цвета между опорными днями
+// смешиваются плавно: пн — первый цвет, ср — второй, вс — последний.
+const WEEK_ANCHORS: Record<number, number[]> = {
+  3: [0, 2, 6],
+  4: [0, 2, 4, 6],
+  5: [0, 1, 2, 4, 6],
+  6: [0, 1, 2, 3, 4, 6],
+  7: [0, 1, 2, 3, 4, 5, 6],
 }
 
-// Варианты отличаются тем, какой базовый цвет достаётся дням недели, уровням и сезонам.
+export function weekdayColorsFromBases(baseColors: string[]): string[] {
+  const anchors = validateBaseColors(baseColors) === null ? WEEK_ANCHORS[baseColors.length] : undefined
+  if (!anchors) return []
+  return Array.from({ length: 7 }, (_, day) => {
+    const next = anchors.findIndex((a) => a >= day)
+    const to = anchors[next] ?? 6
+    if (to === day) return baseColors[next] ?? '#cccccc'
+    const from = anchors[next - 1] ?? 0
+    const t = (day - from) / (to - from)
+    return mixHex(baseColors[next - 1] ?? '#cccccc', baseColors[next] ?? '#cccccc', t)
+  })
+}
+
+function weekGradient(baseColors: string[]): WeekGradient {
+  const days = weekdayColorsFromBases(baseColors)
+  const lightness = (c: string) => hexToHsl(c)[2]
+  const sorted = [...days].sort((x, y) => lightness(x) - lightness(y))
+  // light и dark нужны ручным полям; цвета дней задаёт days
+  return { light: sorted[sorted.length - 1] ?? '#ffffff', dark: sorted[0] ?? '#000000', days }
+}
+
+// Дни недели берут базовые цвета в порядке пользователя. Варианты отличаются тем, какой базовый
+// цвет достаётся сезонам и уровням важности.
 // Первые варианты сдвигают цвета по кругу, следующие идут по сезонам в обратном порядке.
 export function buildPaletteVariants(baseColors: string[], levelCount: number): PaletteVariant[] {
   if (validateBaseColors(baseColors) !== null) return []
@@ -88,7 +112,7 @@ export function buildPaletteVariants(baseColors: string[], levelCount: number): 
     const reversed = Math.floor(k / n) % 2 === 1
     const seasonBase = (season: number) => pick(reversed ? shift - season : shift + season)
     return {
-      weekGradient: weekGradient(pick(shift)),
+      weekGradient: weekGradient(baseColors),
       monthColors: Array.from({ length: 12 }, (_, month) =>
         monthColor(seasonBase(seasonOfMonth(month).season), month),
       ),

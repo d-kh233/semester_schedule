@@ -3,6 +3,8 @@
 export interface WeekGradient {
   light: string
   dark: string
+  // Свой цвет каждого дня (пн–вс); если задан, он сильнее light и dark
+  days?: string[]
 }
 
 const HEX_PATTERN = /^#[0-9a-fA-F]{6}$/
@@ -76,6 +78,8 @@ export function weekdayWeight(weekdayIndex: number): number {
 }
 
 export function weekdayColor(weekdayIndex: number, gradient: WeekGradient): string {
+  const own = gradient.days?.[weekdayIndex]
+  if (own !== undefined && isHexColor(own)) return own
   return mixHex(gradient.light, gradient.dark, weekdayWeight(weekdayIndex))
 }
 

@@ -6,8 +6,9 @@ import {
   seasonOfMonth,
   validateBaseColors,
   variantCount,
+  weekdayColorsFromBases,
 } from '../../src/core/autoPalette'
-import { hexToHsl, hslToHex, isHexColor } from '../../src/core/colors'
+import { hexToHsl, hslToHex, isHexColor, weekdayColor } from '../../src/core/colors'
 
 const BASES = ['#7d3040', '#e0a45e', '#9db4cf', '#a9bf63', '#b98fb5', '#d98f7a', '#4a6fa5']
 const take = (n: number) => BASES.slice(0, n)
@@ -138,30 +139,21 @@ describe('buildPaletteVariants', () => {
     }
   })
 
-  it('градиент недели: светлый цвет светлее тёмного', () => {
-    for (const variant of buildPaletteVariants(take(5), 3)) {
-      const light = hexToHsl(variant.weekGradient.light)[2]
-      const dark = hexToHsl(variant.weekGradient.dark)[2]
-      expect(light).toBeGreaterThan(dark + 0.4)
-    }
-  })
-
-  it('все цвета палитры берутся от базовых: оттенок каждого близок к оттенку одного из них', () => {
+  it('цвета месяцев и уровней идут от оттенков базовых цветов', () => {
     const bases = take(3)
     const baseHues = bases.map((b) => hexToHsl(b)[0])
     const distance = (a: number, b: number) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b))
     for (const variant of buildPaletteVariants(bases, 3)) {
-      const all = [
-        ...variant.monthColors,
-        ...variant.levelColors,
-        variant.weekGradient.light,
-        variant.weekGradient.dark,
-      ]
-      for (const color of all) {
+      for (const color of [...variant.monthColors, ...variant.levelColors]) {
         const hue = hexToHsl(color)[0]
         expect(Math.min(...baseHues.map((h) => distance(h, hue)))).toBeLessThan(8)
       }
     }
+  })
+
+  it('дни недели одинаковы во всех вариантах: порядок базовых цветов задаёт пользователь', () => {
+    const variants = buildPaletteVariants(take(4), 3)
+    for (const v of variants) expect(v.weekGradient).toEqual(variants[0]?.weekGradient)
   })
 
   it('результат не зависит от часов и случайности: два вызова дают одно и то же', () => {
@@ -170,5 +162,60 @@ describe('buildPaletteVariants', () => {
 
   it('при неверных базовых цветах вариантов нет', () => {
     expect(buildPaletteVariants(take(2), 3)).toEqual([])
+  })
+})
+
+describe('weekdayColorsFromBases', () => {
+  const A = '#ff0000'
+  const B = '#00ff00'
+  const C = '#0000ff'
+
+  it('3 цвета: пн — первый, ср — второй, вс — третий', () => {
+    const days = weekdayColorsFromBases([A, B, C])
+    expect(days).toHaveLength(7)
+    expect(days[0]).toBe(A)
+    expect(days[2]).toBe(B)
+    expect(days[6]).toBe(C)
+  })
+
+  it('между опорными днями плавный переход (смесь соседних цветов)', () => {
+    const days = weekdayColorsFromBases([A, B, C])
+    expect(days[1]).toBe('#808000') // вт: середина между красным и зелёным
+    expect(days[3]).toBe('#00bf40') // чт: четверть пути от зелёного к синему
+    expect(days[5]).toBe('#0040bf') // сб: три четверти
+  })
+
+  it('4 цвета: пн, ср, пт, вс', () => {
+    const d = ['#111111', '#333333', '#555555', '#777777']
+    const days = weekdayColorsFromBases(d)
+    expect([days[0], days[2], days[4], days[6]]).toEqual(d)
+  })
+
+  it('5 цветов: пн, вт, ср, пт, вс', () => {
+    const d = ['#111111', '#222222', '#333333', '#555555', '#777777']
+    const days = weekdayColorsFromBases(d)
+    expect([days[0], days[1], days[2], days[4], days[6]]).toEqual(d)
+  })
+
+  it('6 цветов: пн, вт, ср, чт, пт, вс', () => {
+    const d = ['#111111', '#222222', '#333333', '#444444', '#555555', '#777777']
+    const days = weekdayColorsFromBases(d)
+    expect([days[0], days[1], days[2], days[3], days[4], days[6]]).toEqual(d)
+  })
+
+  it('7 цветов: у каждого дня свой цвет по порядку', () => {
+    const d = ['#111111', '#222222', '#333333', '#444444', '#555555', '#666666', '#777777']
+    expect(weekdayColorsFromBases(d)).toEqual(d)
+  })
+
+  it('все цвета в формате #rrggbb; неверный набор даёт пустой список', () => {
+    for (const c of weekdayColorsFromBases(take(5))) expect(isHexColor(c)).toBe(true)
+    expect(weekdayColorsFromBases(take(2))).toEqual([])
+  })
+
+  it('weekdayColor в сетке берёт цвета дней из варианта', () => {
+    const [variant] = buildPaletteVariants([A, B, C], 3)
+    expect(weekdayColor(0, variant?.weekGradient ?? { light: '#fff', dark: '#000' })).toBe(A)
+    expect(weekdayColor(2, variant?.weekGradient ?? { light: '#fff', dark: '#000' })).toBe(B)
   })
 })

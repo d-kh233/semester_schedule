@@ -6,7 +6,7 @@ import {
   validateBaseColors,
   type PaletteVariant,
 } from '../../core/autoPalette'
-import { contrastText, mixHex } from '../../core/colors'
+import { contrastText, weekdayColor } from '../../core/colors'
 import { ru } from '../../i18n/ru'
 
 interface Props {
@@ -18,8 +18,6 @@ interface Props {
   onApply: (variant: PaletteVariant) => void
 }
 
-const WEEK_WEIGHTS = [1, 0.5, 0, 0.25, 0.5, 0.75, 1]
-
 function Swatch({ color, label }: { color: string; label?: string }) {
   return (
     <span className="auto-palette__swatch" style={{ background: color, color: contrastText(color) }}>
@@ -29,12 +27,11 @@ function Swatch({ color, label }: { color: string; label?: string }) {
 }
 
 function VariantPreview({ variant }: { variant: PaletteVariant }) {
-  const { light, dark } = variant.weekGradient
   return (
     <div className="auto-palette__preview">
       <div className="auto-palette__row" aria-label={ru.palette.auto.previewWeek}>
-        {WEEK_WEIGHTS.map((w, i) => (
-          <Swatch key={i} color={mixHex(light, dark, w)} label={ru.weekdaysShort[i]} />
+        {ru.weekdaysShort.map((name, i) => (
+          <Swatch key={name} color={weekdayColor(i, variant.weekGradient)} label={name} />
         ))}
       </div>
       <div className="auto-palette__row auto-palette__row--months" aria-label={ru.palette.auto.previewMonths}>

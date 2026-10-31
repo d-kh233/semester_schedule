@@ -49,9 +49,13 @@ function readGradient(value: unknown): WeekGradient {
   const fallback = defaultSettings.weekGradient
   if (!isRecord(value)) return fallback
   const { light, dark } = value
+  const days = value.days
+  const validDays =
+    Array.isArray(days) && days.length === 7 && days.every((d) => typeof d === 'string' && isHexColor(d))
   return {
     light: typeof light === 'string' && isHexColor(light) ? light : fallback.light,
     dark: typeof dark === 'string' && isHexColor(dark) ? dark : fallback.dark,
+    ...(validDays ? { days: days as string[] } : {}),
   }
 }
 

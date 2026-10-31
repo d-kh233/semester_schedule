@@ -121,3 +121,29 @@ test('повтор базового цвета: подсказка об ошиб
   await expect(page.getByRole('alert')).toHaveCount(0)
   await expect(variants(page)).toHaveCount(4)
 })
+
+test('дни недели берут базовые цвета: пн — первый, ср — второй, вс — третий; цвет дня правится вручную', async ({
+  page,
+}) => {
+  await openDemo(page)
+  await openSettings(page)
+  await page.getByTestId('variant-apply-0').click()
+  await saved(page)
+  await closeSettings(page)
+  // 2 ноября 2026 — понедельник, 4-е — среда, 1-е — воскресенье
+  await expect(page.getByTestId('weekday-2026-11-2')).toHaveCSS('background-color', 'rgb(125, 48, 64)')
+  await expect(page.getByTestId('weekday-2026-11-4')).toHaveCSS('background-color', 'rgb(224, 164, 94)')
+  await expect(page.getByTestId('weekday-2026-11-1')).toHaveCSS('background-color', 'rgb(157, 180, 207)')
+  // вторник — плавный переход между первым и вторым цветом
+  await expect(page.getByTestId('weekday-2026-11-3')).toHaveCSS('background-color', 'rgb(175, 106, 79)')
+
+  await openSettings(page)
+  await page.getByTestId('week-color-1').fill('#336699')
+  await saved(page)
+  await closeSettings(page)
+  await expect(page.getByTestId('weekday-2026-11-3')).toHaveCSS('background-color', 'rgb(51, 102, 153)')
+  await expect(page.getByTestId('weekday-2026-11-2')).toHaveCSS('background-color', 'rgb(125, 48, 64)')
+
+  await page.reload()
+  await expect(page.getByTestId('weekday-2026-11-3')).toHaveCSS('background-color', 'rgb(51, 102, 153)')
+})

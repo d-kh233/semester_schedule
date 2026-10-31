@@ -128,3 +128,23 @@ describe('базовые цвета палитры (paletteBases)', () => {
     expect(defaultSettings.paletteBases.length).toBeLessThanOrEqual(7)
   })
 })
+
+describe('цвета дней недели (weekGradient.days)', () => {
+  const days = ['#111111', '#222222', '#333333', '#444444', '#555555', '#666666', '#777777']
+  const base = { light: '#ffffff', dark: '#000000' }
+
+  it('верные 7 цветов сохраняются', () => {
+    expect(parseSettings({ weekGradient: { ...base, days } }).weekGradient.days).toEqual(days)
+  })
+
+  it('старая запись без days читается без этого поля', () => {
+    expect(parseSettings({ weekGradient: base }).weekGradient.days).toBeUndefined()
+  })
+
+  it('испорченный список (не 7 или не цвет) отбрасывается, light и dark остаются', () => {
+    const bad = parseSettings({ weekGradient: { ...base, days: days.slice(0, 6) } }).weekGradient
+    expect(bad.days).toBeUndefined()
+    expect(bad.dark).toBe('#000000')
+    expect(parseSettings({ weekGradient: { ...base, days: [...days.slice(0, 6), 'x'] } }).weekGradient.days).toBeUndefined()
+  })
+})

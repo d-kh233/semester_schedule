@@ -1,6 +1,7 @@
 import type { PaletteVariant } from '../../core/autoPalette'
 import type { ImportanceLevel } from '../../core/catalog'
 import { DEFAULT_LEVEL_COLORS, sortLevels } from '../../core/catalog'
+import { weekdayColor } from '../../core/colors'
 import { defaultSettings, type Settings } from '../../core/settings'
 import { ru } from '../../i18n/ru'
 import { AutoPalette } from './AutoPalette'
@@ -18,6 +19,14 @@ export function PaletteControls({ settings, levels, onSettingsChange, onLevelCol
   function setMonthColor(index: number, color: string) {
     const next = settings.monthColors.map((c, i) => (i === index ? color : c))
     onSettingsChange({ monthColors: next })
+  }
+
+  // Свой цвет дня: остальные дни остаются как были
+  function setDayColor(day: number, color: string) {
+    const days = ru.weekdaysShort.map((_, d) =>
+      d === day ? color : weekdayColor(d, settings.weekGradient),
+    )
+    onSettingsChange({ weekGradient: { ...settings.weekGradient, days } })
   }
 
   function applyVariant(variant: PaletteVariant) {
@@ -47,7 +56,7 @@ export function PaletteControls({ settings, levels, onSettingsChange, onLevelCol
             type="color"
             value={settings.weekGradient.light}
             onChange={(e) =>
-              onSettingsChange({ weekGradient: { ...settings.weekGradient, light: e.target.value } })
+              onSettingsChange({ weekGradient: { light: e.target.value, dark: settings.weekGradient.dark } })
             }
           />
         </label>
@@ -57,10 +66,21 @@ export function PaletteControls({ settings, levels, onSettingsChange, onLevelCol
             type="color"
             value={settings.weekGradient.dark}
             onChange={(e) =>
-              onSettingsChange({ weekGradient: { ...settings.weekGradient, dark: e.target.value } })
+              onSettingsChange({ weekGradient: { light: settings.weekGradient.light, dark: e.target.value } })
             }
           />
         </label>
+        {ru.weekdaysShort.map((name, day) => (
+          <label key={name}>
+            {name}
+            <input
+              type="color"
+              data-testid={`week-color-${day}`}
+              value={weekdayColor(day, settings.weekGradient)}
+              onChange={(e) => setDayColor(day, e.target.value)}
+            />
+          </label>
+        ))}
         {ru.months.map((name, index) => (
           <label key={name}>
             {name}
