@@ -1,0 +1,35 @@
+node_modules
+dist
+*.tsbuildinfo
+test-results
+playwright-report
+.vite
+
+# Документы заказчицы и рабочие файлы плана (не коммитить)
+CLAUDE.md
+SPEC*.md
+PLAN.md
+DECISIONS.md
+
+# Секреты и личные данные
+.env
+.env.*
+!.env.example
+
+# Базы и выгрузки данных (личные данные не должны попасть в git)
+*.db
+*.sqlite
+*.sqlite3
+*.sql.gz
+*.dump
+supabase/.temp
+supabase/.branches
+*.xlsx
+*.xls
+*.csv
+
+# Редактор и система
+.vscode
+.idea
+.DS_Store
+Thumbs.db
