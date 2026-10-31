@@ -3,7 +3,9 @@ import {
   buildCalendar,
   getDayTiming,
   validateSemester,
+  firstMondayOnOrAfter,
   weekNumber,
+  weekOneMondayFor,
 } from '../../src/core/calendar'
 
 // «Сегодня» во всех тестах задаётся явно
@@ -125,30 +127,72 @@ describe('weekNumber (неделя начинается с первого пон
   const START = '2026-09-01' // вторник
 
   it('первый понедельник семестра — неделя 1', () => {
-    expect(weekNumber('2026-09-07', START)).toBe(1)
+    expect(weekNumber('2026-09-07', firstMondayOnOrAfter(START))).toBe(1)
   })
 
   it('следующие понедельники: 2, 3, ...', () => {
-    expect(weekNumber('2026-09-14', START)).toBe(2)
-    expect(weekNumber('2026-10-26', START)).toBe(8)
+    expect(weekNumber('2026-09-14', firstMondayOnOrAfter(START))).toBe(2)
+    expect(weekNumber('2026-10-26', firstMondayOnOrAfter(START))).toBe(8)
   })
 
   it('все дни недели относятся к одной неделе (вт-вс после понедельника)', () => {
-    expect(weekNumber('2026-09-13', START)).toBe(1)
-    expect(weekNumber('2026-09-14', START)).toBe(2)
+    expect(weekNumber('2026-09-13', firstMondayOnOrAfter(START))).toBe(1)
+    expect(weekNumber('2026-09-14', firstMondayOnOrAfter(START))).toBe(2)
   })
 
   it('дни до первого понедельника без номера', () => {
-    expect(weekNumber('2026-09-01', START)).toBeNull()
-    expect(weekNumber('2026-09-06', START)).toBeNull()
+    expect(weekNumber('2026-09-01', firstMondayOnOrAfter(START))).toBeNull()
+    expect(weekNumber('2026-09-06', firstMondayOnOrAfter(START))).toBeNull()
   })
 
   it('если семестр начался в понедельник, он сам неделя 1', () => {
-    expect(weekNumber('2026-09-07', '2026-09-07')).toBe(1)
-    expect(weekNumber('2026-09-14', '2026-09-07')).toBe(2)
+    expect(weekNumber('2026-09-07', firstMondayOnOrAfter('2026-09-07'))).toBe(1)
+    expect(weekNumber('2026-09-14', firstMondayOnOrAfter('2026-09-07'))).toBe(2)
   })
 
   it('через границу года', () => {
-    expect(weekNumber('2027-01-04', START)).toBe(18)
+    expect(weekNumber('2027-01-04', firstMondayOnOrAfter(START))).toBe(18)
+  })
+})
+
+describe('firstMondayOnOrAfter', () => {
+  it('понедельник остаётся собой', () => {
+    expect(firstMondayOnOrAfter('2026-09-07')).toBe('2026-09-07')
+  })
+
+  it('остальные дни — следующий понедельник', () => {
+    expect(firstMondayOnOrAfter('2026-09-01')).toBe('2026-09-07')
+    expect(firstMondayOnOrAfter('2026-09-06')).toBe('2026-09-07')
+    expect(firstMondayOnOrAfter('2026-12-30')).toBe('2027-01-04')
+  })
+})
+
+describe('weekOneMondayFor (поставить номер на другую неделю)', () => {
+  it('единица на другом понедельнике: счёт начинается с него', () => {
+    const weekOne = weekOneMondayFor('2026-09-14', 1)
+    expect(weekOne).toBe('2026-09-14')
+    expect(weekNumber('2026-09-07', weekOne)).toBeNull()
+    expect(weekNumber('2026-09-14', weekOne)).toBe(1)
+    expect(weekNumber('2026-09-21', weekOne)).toBe(2)
+  })
+
+  it('число больше 1: недели до него получают номера, меняется вся таблица', () => {
+    const weekOne = weekOneMondayFor('2026-09-28', 10)
+    expect(weekOne).toBe('2026-07-27')
+    expect(weekNumber('2026-09-28', weekOne)).toBe(10)
+    expect(weekNumber('2026-09-14', weekOne)).toBe(8)
+    expect(weekNumber('2026-09-07', weekOne)).toBe(7)
+  })
+
+  it('тот же номер на том же месте ничего не меняет', () => {
+    const weekOne = weekOneMondayFor('2026-09-07', 1)
+    expect(weekNumber('2026-10-26', weekOne)).toBe(8)
+  })
+
+  it('не понедельник или неверный номер — ошибка', () => {
+    expect(() => weekOneMondayFor('2026-09-08', 1)).toThrow()
+    expect(() => weekOneMondayFor('2026-09-07', 0)).toThrow()
+    expect(() => weekOneMondayFor('2026-09-07', 1.5)).toThrow()
+    expect(() => weekOneMondayFor('2026-09-07', 100)).toThrow()
   })
 })

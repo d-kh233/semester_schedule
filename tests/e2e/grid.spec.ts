@@ -77,8 +77,8 @@ test('семестр настраивается: сетка перестраив
   page,
 }) => {
   await openWithToday(page)
-  await page.getByLabel('Начало семестра').fill('2027-02-01')
-  await page.getByLabel('Конец семестра').fill('2027-06-30')
+  await page.getByLabel('Начало семестра', { exact: true }).fill('2027-02-01')
+  await page.getByLabel('Конец семестра', { exact: true }).fill('2027-06-30')
   await expect(page.getByTestId('month-2027-02')).toBeVisible()
   await expect(page.getByTestId('month-2027-06')).toBeVisible()
   await expect(page.getByTestId('month-2026-09')).toHaveCount(0)
@@ -87,16 +87,16 @@ test('семестр настраивается: сетка перестраив
 
   await page.reload()
   await expect(page.getByTestId('month-2027-02')).toBeVisible()
-  await expect(page.getByLabel('Начало семестра')).toHaveValue('2027-02-01')
+  await expect(page.getByLabel('Начало семестра', { exact: true })).toHaveValue('2027-02-01')
 })
 
 test('неверный семестр: понятное сообщение, прежняя сетка не ломается', async ({ page }) => {
   await openWithToday(page)
-  await page.getByLabel('Конец семестра').fill('2026-08-01')
+  await page.getByLabel('Конец семестра', { exact: true }).fill('2026-08-01')
   await expect(page.getByRole('alert')).toHaveText('Конец семестра раньше начала.')
   await expect(page.getByTestId('month-2026-09')).toBeVisible()
 
-  await page.getByLabel('Конец семестра').fill('2027-01-31')
+  await page.getByLabel('Конец семестра', { exact: true }).fill('2027-01-31')
   await expect(page.getByRole('alert')).toHaveCount(0)
 })
 

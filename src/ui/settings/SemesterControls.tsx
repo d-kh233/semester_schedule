@@ -1,41 +1,38 @@
-import type { SemesterError } from '../../core/calendar'
+import { useState } from 'react'
+import { validateSemester } from '../../core/calendar'
+import type { Semester } from '../../core/model'
 import type { NonexistentDaysMode, Settings } from '../../core/settings'
 import { ru } from '../../i18n/ru'
 
 interface Props {
+  semester: Semester
   settings: Settings
-  draftStart: string
-  draftEnd: string
-  error: SemesterError | null
   onDatesChange: (start: string, end: string) => void
   onSettingsChange: (patch: Partial<Settings>) => void
 }
 
-export function SemesterControls({
-  settings,
-  draftStart,
-  draftEnd,
-  error,
-  onDatesChange,
-  onSettingsChange,
-}: Props) {
+// Вызывать с key = id расписания: поля дат начинаются заново при переключении расписания
+export function SemesterControls({ semester, settings, onDatesChange, onSettingsChange }: Props) {
+  const [start, setStart] = useState(semester.startDate)
+  const [end, setEnd] = useState(semester.endDate)
+  const error = validateSemester(start, end)
+
+  // Сетка меняется только на верном семестре; пока даты неверны, остаётся прежняя
+  function changeDates(nextStart: string, nextEnd: string) {
+    setStart(nextStart)
+    setEnd(nextEnd)
+    if (validateSemester(nextStart, nextEnd) === null) onDatesChange(nextStart, nextEnd)
+  }
+
   return (
     <section className="controls">
       <label>
         {ru.controls.semesterStart}
-        <input
-          type="date"
-          value={draftStart}
-          onChange={(e) => onDatesChange(e.target.value, draftEnd)}
-        />
+        <input type="date" value={start} onChange={(e) => changeDates(e.target.value, end)} />
       </label>
       <label>
         {ru.controls.semesterEnd}
-        <input
-          type="date"
-          value={draftEnd}
-          onChange={(e) => onDatesChange(draftStart, e.target.value)}
-        />
+        <input type="date" value={end} onChange={(e) => changeDates(start, e.target.value)} />
       </label>
       <label>
         <input

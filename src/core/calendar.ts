@@ -83,11 +83,25 @@ export function getDayTiming(date: IsoDate, today: IsoDate): DayTiming {
   return order === 0 ? 'today' : 'future'
 }
 
-// Номер учебной недели: неделя 1 начинается с первого понедельника на дату начала семестра или позже.
-// Дни до этого понедельника номера не имеют (null).
-export function weekNumber(date: IsoDate, semesterStart: IsoDate): number | null {
-  const firstMonday = addDays(semesterStart, (7 - weekday(semesterStart)) % 7)
-  const offset = diffDays(firstMonday, date)
+// Первый понедельник на указанную дату или позже
+export function firstMondayOnOrAfter(date: IsoDate): IsoDate {
+  return addDays(date, (7 - weekday(date)) % 7)
+}
+
+// Номер учебной недели по понедельнику первой недели. Дни до неё номера не имеют (null).
+export function weekNumber(date: IsoDate, weekOneMonday: IsoDate): number | null {
+  const offset = diffDays(weekOneMonday, date)
   if (offset < 0) return null
   return Math.floor(offset / 7) + 1
+}
+
+export const MAX_WEEK_NUMBER = 99
+
+// Понедельник первой недели, если на понедельник monday поставили номер number
+export function weekOneMondayFor(monday: IsoDate, number: number): IsoDate {
+  if (weekday(monday) !== 0) throw new Error(`Не понедельник: ${monday}`)
+  if (!Number.isInteger(number) || number < 1 || number > MAX_WEEK_NUMBER) {
+    throw new Error(`Неверный номер недели: ${number}`)
+  }
+  return addDays(monday, -7 * (number - 1))
 }

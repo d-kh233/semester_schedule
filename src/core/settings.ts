@@ -1,4 +1,5 @@
-// Настройки, нужные сетке. Остальные настройки (типы, уровни важности) добавятся на шаге 6.
+// Общие настройки вида (палитра и поведение клеток). Всё, что относится к конкретному
+// расписанию (даты, недели, ширины), лежит в модели расписания, см. model.ts.
 
 import { validateSemester } from './calendar'
 import { isHexColor, type WeekGradient } from './colors'
@@ -7,8 +8,6 @@ import { isValidIsoDate, type IsoDate } from './dates'
 export type NonexistentDaysMode = 'gray' | 'hidden'
 
 export interface Settings {
-  semesterStart: IsoDate
-  semesterEnd: IsoDate
   weekGradient: WeekGradient
   // Цвета месяцев: индекс 0 — январь, 11 — декабрь
   monthColors: string[]
@@ -16,9 +15,9 @@ export interface Settings {
   nonexistentDays: NonexistentDaysMode
 }
 
+export const defaultSemesterDates = { start: '2026-09-01', end: '2027-01-31' } as const
+
 export const defaultSettings: Settings = {
-  semesterStart: '2026-09-01',
-  semesterEnd: '2027-01-31',
   weekGradient: { light: '#f8dfc8', dark: '#4a1824' },
   monthColors: [
     '#9db4cf', // январь
@@ -55,32 +54,16 @@ function readGradient(value: unknown): WeekGradient {
 function readMonthColors(value: unknown): string[] {
   if (!Array.isArray(value) || value.length !== 12) return defaultSettings.monthColors
   return value.map((color, i) =>
-    typeof color === 'string' && isHexColor(color) ? color : (defaultSettings.monthColors[i] ?? '#dddddd'),
+    typeof color === 'string' && isHexColor(color)
+      ? color
+      : (defaultSettings.monthColors[i] ?? '#dddddd'),
   )
 }
 
-// Читает сохранённые настройки. Любая порча данных даёт значения по умолчанию, но не ошибку.
-export function parseStoredSettings(json: string | null): Settings {
-  if (!json) return defaultSettings
-  let data: unknown
-  try {
-    data = JSON.parse(json)
-  } catch {
-    return defaultSettings
-  }
+// Читает настройки из записи хранилища. Любая порча даёт значения по умолчанию, но не ошибку.
+export function parseSettings(data: unknown): Settings {
   if (!isRecord(data)) return defaultSettings
-
-  // Каждая верная дата сохраняется, неверная заменяется по умолчанию;
-  // если вместе они не образуют семестр, берётся пара по умолчанию
-  const storedStart = typeof data.semesterStart === 'string' ? data.semesterStart : ''
-  const storedEnd = typeof data.semesterEnd === 'string' ? data.semesterEnd : ''
-  const start = isValidIsoDate(storedStart) ? storedStart : defaultSettings.semesterStart
-  const end = isValidIsoDate(storedEnd) ? storedEnd : defaultSettings.semesterEnd
-  const semesterOk = validateSemester(start, end) === null
-
   return {
-    semesterStart: semesterOk ? start : defaultSettings.semesterStart,
-    semesterEnd: semesterOk ? end : defaultSettings.semesterEnd,
     weekGradient: readGradient(data.weekGradient),
     monthColors: readMonthColors(data.monthColors),
     mutePastDays:
@@ -89,5 +72,43 @@ export function parseStoredSettings(json: string | null): Settings {
       data.nonexistentDays === 'gray' || data.nonexistentDays === 'hidden'
         ? data.nonexistentDays
         : defaultSettings.nonexistentDays,
+  }
+}
+
+export interface LegacySettings {
+  settings: Settings
+  semesterStart: IsoDate
+  semesterEnd: IsoDate
+}
+
+// Настройки шага 2 лежали в localStorage вместе с датами семестра.
+// Читаются один раз при переезде в IndexedDB.
+export function parseLegacySettings(json: string | null): LegacySettings {
+  const empty: LegacySettings = {
+    settings: defaultSettings,
+    semesterStart: defaultSemesterDates.start,
+    semesterEnd: defaultSemesterDates.end,
+  }
+  if (!json) return empty
+  let data: unknown
+  try {
+    data = JSON.parse(json)
+  } catch {
+    return empty
+  }
+  if (!isRecord(data)) return empty
+
+  // Каждая верная дата сохраняется, неверная заменяется по умолчанию;
+  // если вместе они не образуют семестр, берётся пара по умолчанию
+  const storedStart = typeof data.semesterStart === 'string' ? data.semesterStart : ''
+  const storedEnd = typeof data.semesterEnd === 'string' ? data.semesterEnd : ''
+  const start = isValidIsoDate(storedStart) ? storedStart : defaultSemesterDates.start
+  const end = isValidIsoDate(storedEnd) ? storedEnd : defaultSemesterDates.end
+  const semesterOk = validateSemester(start, end) === null
+
+  return {
+    settings: parseSettings(data),
+    semesterStart: semesterOk ? start : defaultSemesterDates.start,
+    semesterEnd: semesterOk ? end : defaultSemesterDates.end,
   }
 }
