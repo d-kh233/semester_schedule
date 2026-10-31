@@ -16,6 +16,7 @@ import { DeadlinesPage } from '../events/DeadlinesPage'
 import { EventCard } from '../events/EventCard'
 import { EventList } from '../events/EventList'
 import { SemesterGrid } from '../grid/SemesterGrid'
+import { ImportDialog } from '../import/ImportDialog'
 import { QuickInput } from '../input/QuickInput'
 import { useInputEngine } from '../input/useInputEngine'
 import { SettingsDialog } from '../settings/SettingsDialog'
@@ -48,6 +49,7 @@ export function Workspace({
   onSettingsOpenChange,
 }: Props) {
   const [card, setCard] = useState<CardState>(null)
+  const [importOpen, setImportOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // Палитра у каждого расписания своя; пока её нет, действуют общие цвета
@@ -147,6 +149,7 @@ export function Workspace({
               levels={viewLevels}
               subjects={subjects}
               onAdd={() => setCard({ eventId: null, date: null })}
+              onImport={() => setImportOpen(true)}
               onOpen={(id) => setCard({ eventId: id, date: null })}
               onRestore={(id) => data.setEventArchived(id, false)}
             />
@@ -180,6 +183,22 @@ export function Workspace({
           onArchive={data.archiveSchedule}
           onRestore={data.restoreSchedule}
           onClose={() => onSettingsOpenChange(false)}
+        />
+      )}
+      {importOpen && (
+        <ImportDialog
+          semesterId={active.id}
+          today={today}
+          semesterStart={active.startDate}
+          semesterEnd={active.endDate}
+          levels={data.levels}
+          types={data.types}
+          subjects={subjects}
+          events={events}
+          onApply={data.applyEventChanges}
+          onRevert={data.revertEventChanges}
+          onAddSubject={(name, shortName) => data.addSubject(name, shortName, active.isDemo)}
+          onClose={() => setImportOpen(false)}
         />
       )}
       {card && (card.eventId === null || cardEvent) && (

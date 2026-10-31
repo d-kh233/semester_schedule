@@ -25,6 +25,8 @@ export interface ParseOptions {
   importance?: number
   // Ввод в ячейку: событие всегда на этот день, даты в тексте разбираются, но не используются
   fixedDate?: IsoDate
+  // Предмет задан заранее (заголовок блока в импорте текстом): слово предмета в строке не ищем
+  subject?: Subject
 }
 
 export interface ParsedWindow {
@@ -189,7 +191,7 @@ export function parseInputLine(
 
   // 5. Предмет по короткому имени
   let subjectIndex = -1
-  let subject: Subject | null = null
+  let subject: Subject | null = options.subject ?? null
   for (let i = 0; i < tokens.length && subject === null; i++) {
     if (!isFree(i) || i === typeIndex || i === phraseIndex) continue
     const word = (tokens[i]?.raw ?? '').toLowerCase()

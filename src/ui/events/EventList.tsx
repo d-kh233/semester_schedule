@@ -9,12 +9,22 @@ interface Props {
   levels: ImportanceLevel[]
   subjects: Subject[]
   onAdd: () => void
+  onImport: () => void
   onOpen: (id: string) => void
   onRestore: (id: string) => void
 }
 
 // Содержимое окна «Список дедлайнов»: задания до конца семестра и архив событий
-export function EventList({ events, types, levels, subjects, onAdd, onOpen, onRestore }: Props) {
+export function EventList({
+  events,
+  types,
+  levels,
+  subjects,
+  onAdd,
+  onImport,
+  onOpen,
+  onRestore,
+}: Props) {
   const sorted = [...events].sort((a, b) => compareEvents(a, b, types))
   const live = sorted.filter((e) => !e.archived)
   const archived = sorted.filter((e) => e.archived)
@@ -23,6 +33,9 @@ export function EventList({ events, types, levels, subjects, onAdd, onOpen, onRe
     <section className="events">
       <div className="events__head">
         <h3>{ru.deadlines.untilEnd}</h3>
+        <button type="button" onClick={onImport}>
+          {ru.importText.button}
+        </button>
         <button type="button" onClick={onAdd}>
           {ru.events.add}
         </button>
