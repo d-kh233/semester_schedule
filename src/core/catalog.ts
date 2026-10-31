@@ -41,9 +41,9 @@ export function buildDefaultCatalog(newId: () => string): {
   levels: ImportanceLevel[]
 } {
   const levels: ImportanceLevel[] = [
-    { id: newId(), number: 1, name: 'Важность 1', color: '#c0502d', order: 1 },
-    { id: newId(), number: 2, name: 'Важность 2', color: '#f6d98f', order: 2 },
-    { id: newId(), number: 3, name: 'Важность 3', color: '#f5dcc4', order: 3 },
+    { id: newId(), number: 1, name: 'Важность 1', color: DEFAULT_LEVEL_COLORS[0], order: 1 },
+    { id: newId(), number: 2, name: 'Важность 2', color: DEFAULT_LEVEL_COLORS[1], order: 2 },
+    { id: newId(), number: 3, name: 'Важность 3', color: DEFAULT_LEVEL_COLORS[2], order: 3 },
   ]
   const types: EventType[] = [
     {
@@ -93,6 +93,19 @@ export function buildDefaultCatalog(newId: () => string): {
     },
   ]
   return { types, levels }
+}
+
+// Цвета уровней 1–3 по умолчанию (кнопка «Вернуть цвета по умолчанию»)
+export const DEFAULT_LEVEL_COLORS = ['#c0502d', '#f6d98f', '#f5dcc4'] as const
+
+// Красит уровни по порядку (colors[0] — первый уровень). Возвращает только изменившиеся уровни.
+export function recolorLevels(levels: ImportanceLevel[], colors: readonly string[]): ImportanceLevel[] {
+  const changed: ImportanceLevel[] = []
+  sortLevels(levels).forEach((level, i) => {
+    const color = colors[i]
+    if (color !== undefined && color !== level.color) changed.push({ ...level, color })
+  })
+  return changed
 }
 
 export type SubjectError = 'name-empty' | 'short-empty' | 'short-spaces' | 'short-duplicate'

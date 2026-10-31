@@ -99,3 +99,32 @@ describe('значения по умолчанию', () => {
     expect(defaultSettings.monthColors).toHaveLength(12)
   })
 })
+
+describe('базовые цвета палитры (paletteBases)', () => {
+  it('старая запись без поля читается: берутся базовые цвета по умолчанию', () => {
+    const old = { weekGradient: defaultSettings.weekGradient, monthColors: defaultSettings.monthColors }
+    expect(parseSettings(old).paletteBases).toEqual(defaultSettings.paletteBases)
+  })
+
+  it('верный набор из 3–7 цветов сохраняется', () => {
+    const bases = ['#112233', '#445566', '#778899', '#aabbcc']
+    expect(parseSettings({ paletteBases: bases }).paletteBases).toEqual(bases)
+  })
+
+  it('испорченный набор (мало цветов, не цвет, повтор) заменяется значениями по умолчанию', () => {
+    expect(parseSettings({ paletteBases: ['#112233'] }).paletteBases).toEqual(
+      defaultSettings.paletteBases,
+    )
+    expect(parseSettings({ paletteBases: ['#112233', 'x', '#778899'] }).paletteBases).toEqual(
+      defaultSettings.paletteBases,
+    )
+    expect(parseSettings({ paletteBases: '#112233' }).paletteBases).toEqual(
+      defaultSettings.paletteBases,
+    )
+  })
+
+  it('по умолчанию базовых цветов от 3 до 7', () => {
+    expect(defaultSettings.paletteBases.length).toBeGreaterThanOrEqual(3)
+    expect(defaultSettings.paletteBases.length).toBeLessThanOrEqual(7)
+  })
+})

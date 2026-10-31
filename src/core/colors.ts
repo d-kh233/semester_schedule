@@ -31,6 +31,40 @@ export function mixHex(a: string, b: string, t: number): string {
   return `#${mixed.map(toHex).join('')}`
 }
 
+// Оттенок 0–360, насыщенность и светлота 0–1
+export function hexToHsl(hex: string): [number, number, number] {
+  const [r, g, b] = channels(hex).map((c) => c / 255) as [number, number, number]
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  const l = (max + min) / 2
+  if (max === min) return [0, 0, l]
+  const d = max - min
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+  let h: number
+  if (max === r) h = (g - b) / d + (g < b ? 6 : 0)
+  else if (max === g) h = (b - r) / d + 2
+  else h = (r - g) / d + 4
+  return [h * 60, s, l]
+}
+
+export function hslToHex(h: number, s: number, l: number): string {
+  const hue = (((h % 360) + 360) % 360) / 360
+  const sat = Math.min(1, Math.max(0, s))
+  const light = Math.min(1, Math.max(0, l))
+  const q = light < 0.5 ? light * (1 + sat) : light + sat - light * sat
+  const p = 2 * light - q
+  const channel = (t: number) => {
+    const x = t < 0 ? t + 1 : t > 1 ? t - 1 : t
+    if (x < 1 / 6) return p + (q - p) * 6 * x
+    if (x < 1 / 2) return q
+    if (x < 2 / 3) return p + (q - p) * (2 / 3 - x) * 6
+    return p
+  }
+  return `#${[channel(hue + 1 / 3), channel(hue), channel(hue - 1 / 3)]
+    .map((c) => toHex(c * 255))
+    .join('')}`
+}
+
 // Насколько тёмным должен быть день: 1 = самый тёмный, 0 = самый светлый.
 // Индекс: 0 = понедельник ... 6 = воскресенье. Среда светлая, понедельник и воскресенье тёмные.
 const WEEKDAY_WEIGHTS = [1, 0.5, 0, 0.25, 0.5, 0.75, 1] as const

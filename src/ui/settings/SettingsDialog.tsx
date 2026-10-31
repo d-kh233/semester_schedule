@@ -1,4 +1,5 @@
 import type { Semester } from '../../core/model'
+import type { ImportanceLevel } from '../../core/catalog'
 import type { Settings } from '../../core/settings'
 import { ru } from '../../i18n/ru'
 import { Modal } from '../common/Modal'
@@ -10,8 +11,10 @@ interface Props {
   semesters: Semester[]
   active: Semester
   settings: Settings
+  levels: ImportanceLevel[]
   onDatesChange: (start: string, end: string) => void
   onSettingsChange: (patch: Partial<Settings>) => void
+  onLevelColorsChange: (colors: readonly string[]) => void
   onResetWidths: () => void
   onCreate: (name: string, startDate: string, endDate: string) => void
   onRename: (id: string, name: string) => void
@@ -35,7 +38,12 @@ export function SettingsDialog(props: Props) {
       <button type="button" className="btn" onClick={props.onResetWidths}>
         {ru.grid.resetWidth}
       </button>
-      <PaletteControls settings={props.settings} onSettingsChange={props.onSettingsChange} />
+      <PaletteControls
+        settings={props.settings}
+        levels={props.levels}
+        onSettingsChange={props.onSettingsChange}
+        onLevelColorsChange={props.onLevelColorsChange}
+      />
       <h3>{ru.settings.schedulesTitle}</h3>
       <ScheduleManager
         semesters={props.semesters}

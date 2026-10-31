@@ -145,10 +145,12 @@ export function Workspace({
           semesters={data.semesters}
           active={active}
           settings={data.settings}
+          levels={data.levels}
           onDatesChange={(startDate, endDate) =>
             data.updateSemester(active.id, { startDate, endDate })
           }
           onSettingsChange={data.updateSettings}
+          onLevelColorsChange={data.setLevelColors}
           onResetWidths={resetWidths}
           onCreate={data.addSchedule}
           onRename={(id, name) => data.updateSemester(id, { name })}

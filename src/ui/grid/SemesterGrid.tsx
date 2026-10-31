@@ -246,7 +246,7 @@ export function SemesterGrid({
                   return (
                     <div
                       key={`${month.key}-event-${lane}-${day.day}`}
-                      className={`${cellClasses(day, today, settings)} cell--lane${lastLane ? '' : ' cell--lane-inner'}`}
+                      className={`${cellClasses(day, today, settings)} cell--lane${lastLane ? '' : ' cell--lane-inner'}${editing?.key === cellKey ? ' cell--selected' : ''}`}
                       style={{ gridRow: eventRow + lane, gridColumn: day.day + 1 }}
                       data-testid={
                         lane === 0

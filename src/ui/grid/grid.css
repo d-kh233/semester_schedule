@@ -16,6 +16,7 @@
 
 .grid {
   --lane-h: 56px;
+  --today: #d93025;
   display: grid;
   width: max-content;
 }
@@ -46,7 +47,8 @@
 }
 
 .head--today {
-  background: #c8dcf8;
+  background: var(--today);
+  color: #fff;
   font-weight: 700;
 }
 
@@ -270,14 +272,26 @@
   opacity: 0.45;
 }
 
+/* Сегодня: красные боковые линии вдоль всего столбца, без заливки (заливка и синяя рамка зарезервированы под наведение и выбор) */
 .cell--today.cell--lane {
-  background: #eef4ff;
-  box-shadow: inset 0 0 0 1px #4a86e8;
+  box-shadow: inset 2px 0 0 var(--today), inset -2px 0 0 var(--today);
 }
 
 .cell--today.cell--weekday {
   font-weight: 700;
-  box-shadow: inset 0 0 0 2px #4a86e8;
+  box-shadow: inset 2px 0 0 var(--today), inset -2px 0 0 var(--today), inset 0 2px 0 var(--today);
+}
+
+/* Наведение: лёгкая подсветка пустой ячейки */
+.cell--lane:not(.cell--blank-gray):not(.cell--blank-hidden):hover {
+  background: rgba(63, 111, 209, 0.14);
+}
+
+/* Выбрана (открыт ввод): заметная заливка и рамка */
+.cell--lane.cell--selected,
+.cell--lane.cell--selected:hover {
+  background: rgba(63, 111, 209, 0.32);
+  box-shadow: inset 0 0 0 2px var(--accent);
 }
 
 .cell--blank-gray {

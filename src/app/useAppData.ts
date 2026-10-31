@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   buildLevelsUpTo,
   createSubject,
+  recolorLevels,
   sortLevels,
   sortSubjects,
   sortTypes,
@@ -452,6 +453,19 @@ export function useAppData() {
     [apply, persist],
   )
 
+  // Красит уровни важности по порядку (автосборка палитры, возврат цветов по умолчанию)
+  const setLevelColors = useCallback(
+    (colors: readonly string[]) => {
+      const current = stateRef.current
+      const changed = recolorLevels(current.levels, colors)
+      if (changed.length === 0) return
+      const byId = new Map(changed.map((l) => [l.id, l]))
+      apply({ ...current, levels: current.levels.map((l) => byId.get(l.id) ?? l) })
+      persist((db) => putLevels(db, changed))
+    },
+    [apply, persist],
+  )
+
   const active = state.semesters.find((s) => s.id === state.activeId) ?? null
 
   return {
@@ -478,5 +492,6 @@ export function useAppData() {
     applyEventChanges,
     revertEventChanges,
     addImportanceLevels,
+    setLevelColors,
   }
 }

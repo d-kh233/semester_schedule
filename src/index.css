@@ -553,3 +553,84 @@ button.btn--active {
   display: flex;
   flex-direction: column;
 }
+
+.auto-palette {
+  margin-bottom: 12px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+
+.auto-palette h4,
+.palette h4 {
+  margin: 8px 0 4px;
+}
+
+.auto-palette__hint {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #555;
+}
+
+.auto-palette__bases {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.auto-palette__base {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.auto-palette__applied {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: #2e7d32;
+}
+
+.auto-palette__variants {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.auto-palette__variant {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+
+.auto-palette__preview {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.auto-palette__row {
+  display: flex;
+  gap: 2px;
+}
+
+.auto-palette__row--months {
+  flex-wrap: wrap;
+}
+
+.auto-palette__swatch {
+  flex: 1 1 0;
+  min-width: 26px;
+  padding: 3px 0;
+  border-radius: 2px;
+  font-size: 10px;
+  text-align: center;
+}
+
+.auto-palette__row--months .auto-palette__swatch {
+  flex: 0 0 calc(16.66% - 2px);
+}

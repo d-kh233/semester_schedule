@@ -1,6 +1,7 @@
 // Общие настройки вида (палитра и поведение клеток). Всё, что относится к конкретному
 // расписанию (даты, недели, ширины), лежит в модели расписания, см. model.ts.
 
+import { validateBaseColors } from './autoPalette'
 import { validateSemester } from './calendar'
 import { isHexColor, type WeekGradient } from './colors'
 import { isValidIsoDate, type IsoDate } from './dates'
@@ -13,6 +14,8 @@ export interface Settings {
   monthColors: string[]
   mutePastDays: boolean
   nonexistentDays: NonexistentDaysMode
+  // Базовые цвета для автосборки палитры (3–7)
+  paletteBases: string[]
 }
 
 export const defaultSemesterDates = { start: '2026-09-01', end: '2027-01-31' } as const
@@ -35,6 +38,7 @@ export const defaultSettings: Settings = {
   ],
   mutePastDays: true,
   nonexistentDays: 'gray',
+  paletteBases: ['#7d3040', '#e0a45e', '#9db4cf'],
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -60,6 +64,13 @@ function readMonthColors(value: unknown): string[] {
   )
 }
 
+function readPaletteBases(value: unknown): string[] {
+  if (!Array.isArray(value)) return defaultSettings.paletteBases
+  const colors = value.filter((c): c is string => typeof c === 'string')
+  const ok = colors.length === value.length && validateBaseColors(colors) === null
+  return ok ? colors : defaultSettings.paletteBases
+}
+
 // Читает настройки из записи хранилища. Любая порча даёт значения по умолчанию, но не ошибку.
 export function parseSettings(data: unknown): Settings {
   if (!isRecord(data)) return defaultSettings
@@ -72,6 +83,7 @@ export function parseSettings(data: unknown): Settings {
       data.nonexistentDays === 'gray' || data.nonexistentDays === 'hidden'
         ? data.nonexistentDays
         : defaultSettings.nonexistentDays,
+    paletteBases: readPaletteBases(data.paletteBases),
   }
 }
 
