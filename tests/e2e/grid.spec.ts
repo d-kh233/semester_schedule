@@ -53,6 +53,25 @@ test('FR-3: сегодняшний день выделен, число в шап
   await expect(page.getByTestId('cell-2026-10-30')).not.toHaveClass(/cell--today/)
 })
 
+test('ячейка подсвечивается при наведении, при нажатии подсвечена заметнее, сегодня выглядит иначе', async ({ page }) => {
+  await openWithToday(page)
+  const cell = page.getByTestId('cell-2026-11-10')
+  const bg = () => cell.evaluate((el) => getComputedStyle(el).backgroundColor)
+  const alpha = (c: string) => Number((c.match(/[\d.]+/g) ?? [])[3] ?? 1)
+  const before = await bg()
+  await cell.hover()
+  const hovered = await bg()
+  expect(hovered).not.toBe(before)
+  await cell.click()
+  await expect(cell).toHaveClass(/cell--selected/)
+  expect(alpha(await bg())).toBeGreaterThan(alpha(hovered))
+  // сегодня не закрашено синим, как выбранная ячейка
+  const todayBg = await page
+    .getByTestId('cell-2026-10-31')
+    .evaluate((el) => getComputedStyle(el).backgroundColor)
+  expect(todayBg).toBe(before)
+})
+
 test('GC-14: прошедшие дни приглушены, настройка отключает приглушение', async ({ page }) => {
   await openWithToday(page)
   await expect(page.getByTestId('cell-2026-10-30')).toHaveClass(/cell--past/)

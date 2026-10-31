@@ -1,8 +1,15 @@
 import { useState } from 'react'
-import type { PaletteVariant } from '../../core/autoPalette'
-import { DEFAULT_LEVEL_COLORS } from '../../core/catalog'
-import { resolveTodayColor, weekdayColor } from '../../core/colors'
-import type { SchedulePalette } from '../../core/schedulePalette'
+import { levelColorsFromBase, type PaletteVariant } from '../../core/autoPalette'
+import { DEFAULT_LEVEL_COLORS, sortLevels, type ImportanceLevel } from '../../core/catalog'
+import { resolveTodayColor, weekdayColor, withAlpha } from '../../core/colors'
+import {
+  clampPastOpacity,
+  DEFAULT_PAST_TEXT_OPACITY,
+  MAX_PAST_TEXT_OPACITY,
+  MIN_PAST_TEXT_OPACITY,
+  withVariant,
+  type SchedulePalette,
+} from '../../core/schedulePalette'
 import { defaultSettings, type Settings } from '../../core/settings'
 import { ru } from '../../i18n/ru'
 import { AutoPalette } from './AutoPalette'
@@ -13,7 +20,7 @@ interface Props {
   // Палитра открытого расписания (своя или общая)
   palette: SchedulePalette
   settings: Settings
-  levelCount: number
+  levels: ImportanceLevel[]
   onPaletteChange: (palette: SchedulePalette) => void
   onSettingsChange: (patch: Partial<Settings>) => void
 }
@@ -22,11 +29,12 @@ export function PaletteControls({
   scheduleName,
   palette,
   settings,
-  levelCount,
+  levels,
   onPaletteChange,
   onSettingsChange,
 }: Props) {
   // Палитра, бывшая до последнего «Применить»: её можно вернуть, пока открыто окно
+  const sortedLevels = sortLevels(levels)
   const [previous, setPrevious] = useState<SchedulePalette | null>(null)
 
   function setMonthColor(index: number, color: string) {
@@ -44,9 +52,30 @@ export function PaletteControls({
     onPaletteChange({ ...palette, weekGradient: { ...palette.weekGradient, days } })
   }
 
-  function applyPalette(next: PaletteVariant) {
+  function setLevelColor(index: number, color: string) {
+    onPaletteChange({
+      ...palette,
+      levelColors: palette.levelColors.map((c, i) => (i === index ? color : c)),
+    })
+  }
+
+  // Цвета важности подбираются от второго цвета недели (среда), как при автосборке
+  function matchLevels() {
+    onPaletteChange({
+      ...palette,
+      levelColors: levelColorsFromBase(weekdayColor(2, palette.weekGradient), sortedLevels.length),
+    })
+  }
+
+  // Автосборка подстраивает «сегодня» под новую палитру; сохранённая палитра приходит целиком
+  function applyAuto(variant: PaletteVariant) {
     setPrevious(palette)
-    onPaletteChange(next)
+    onPaletteChange(withVariant(palette, variant))
+  }
+
+  function applySaved(saved: SchedulePalette) {
+    setPrevious(palette)
+    onPaletteChange(saved)
   }
 
   function reset() {
@@ -54,8 +83,9 @@ export function PaletteControls({
       weekGradient: defaultSettings.weekGradient,
       monthColors: defaultSettings.monthColors,
       levelColors: palette.levelColors.map((c, i) => DEFAULT_LEVEL_COLORS[i] ?? c),
+      todayColor: null,
+      pastTextOpacity: DEFAULT_PAST_TEXT_OPACITY,
     })
-    onSettingsChange({ todayColor: null })
   }
 
   return (
@@ -82,9 +112,9 @@ export function PaletteControls({
       )}
       <AutoPalette
         baseColors={settings.paletteBases}
-        levelCount={levelCount}
+        levelCount={levels.length}
         onBaseColorsChange={(paletteBases) => onSettingsChange({ paletteBases })}
-        onApply={applyPalette}
+        onApply={applyAuto}
       />
       <SavedPalettes
         saved={settings.savedPalettes}
@@ -97,7 +127,7 @@ export function PaletteControls({
             ],
           })
         }
-        onApply={applyPalette}
+        onApply={applySaved}
         onDelete={(id) =>
           onSettingsChange({ savedPalettes: settings.savedPalettes.filter((p) => p.id !== id) })
         }
@@ -156,17 +186,18 @@ export function PaletteControls({
           <input
             type="color"
             data-testid="today-color"
-            value={resolveTodayColor(settings.todayColor, palette.weekGradient)}
-            onChange={(e) => onSettingsChange({ todayColor: e.target.value })}
+            value={resolveTodayColor(palette.todayColor, palette.weekGradient)}
+            onChange={(e) => onPaletteChange({ ...palette, todayColor: e.target.value })}
           />
         </label>
         <label>
           <input
             type="checkbox"
             data-testid="today-auto"
-            checked={settings.todayColor === null}
+            checked={palette.todayColor === null}
             onChange={(e) =>
-              onSettingsChange({
+              onPaletteChange({
+                ...palette,
                 todayColor: e.target.checked
                   ? null
                   : resolveTodayColor(null, palette.weekGradient),
@@ -175,9 +206,51 @@ export function PaletteControls({
           />
           {ru.palette.todayAuto}
         </label>
+        {sortedLevels.map((level, i) => (
+          <label key={level.id}>
+            {level.name}
+            <input
+              type="color"
+              data-testid={`level-color-${level.number}`}
+              value={palette.levelColors[i] ?? level.color}
+              onChange={(e) => setLevelColor(i, e.target.value)}
+            />
+          </label>
+        ))}
+        <button type="button" className="btn" data-testid="match-levels" onClick={matchLevels}>
+          {ru.palette.matchLevels}
+        </button>
         <button type="button" className="btn" onClick={reset}>
           {ru.palette.reset}
         </button>
+      </div>
+      <h4>{ru.palette.pastTitle}</h4>
+      <p className="auto-palette__hint">{ru.palette.pastHint}</p>
+      <div className="past-sample" data-testid="past-sample">
+        <label>
+          {ru.palette.pastOpacity}
+          <input
+            type="range"
+            data-testid="past-opacity"
+            min={MIN_PAST_TEXT_OPACITY * 100}
+            max={MAX_PAST_TEXT_OPACITY * 100}
+            step={5}
+            value={Math.round(palette.pastTextOpacity * 100)}
+            onChange={(e) =>
+              onPaletteChange({ ...palette, pastTextOpacity: clampPastOpacity(Number(e.target.value) / 100) })
+            }
+          />
+          <output data-testid="past-opacity-value">{Math.round(palette.pastTextOpacity * 100)}%</output>
+        </label>
+        <div
+          className="past-sample__cells"
+          style={{ '--past-text': withAlpha(palette.weekGradient.dark, palette.pastTextOpacity) } as React.CSSProperties}
+        >
+          <div className="past-sample__empty">{ru.palette.pastSampleEmpty}</div>
+          <div className="block block--past past-sample__block" data-testid="past-sample-block">
+            <span className="block__label">{ru.palette.pastSampleBlock}</span>
+          </div>
+        </div>
       </div>
     </section>
   )

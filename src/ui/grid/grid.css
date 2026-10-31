@@ -16,7 +16,6 @@
 
 .grid {
   --lane-h: 56px;
-  --today: #d93025;
   display: grid;
   width: max-content;
 }
@@ -48,7 +47,7 @@
 
 .head--today {
   background: var(--today);
-  color: #fff;
+  color: var(--today-text);
   font-weight: 700;
 }
 
@@ -199,9 +198,15 @@
   font-weight: 600;
 }
 
-.block--past,
 .block--done {
   opacity: 0.5;
+}
+
+/* Прошедший блок: фон как у пустой ячейки, текст очень слабый (цвет и прозрачность из палитры) */
+.block--past {
+  background: #fff;
+  color: var(--past-text, rgba(74, 24, 36, 0.35));
+  border: 1px solid #e3e3ea;
 }
 
 .block--planned {
@@ -288,8 +293,8 @@
 }
 
 /* Выбрана (открыт ввод): заметная заливка и рамка */
-.cell--lane.cell--selected,
-.cell--lane.cell--selected:hover {
+.cell--lane.cell--selected:not(.cell--blank-gray):not(.cell--blank-hidden),
+.cell--lane.cell--selected:not(.cell--blank-gray):not(.cell--blank-hidden):hover {
   background: rgba(63, 111, 209, 0.32);
   box-shadow: inset 0 0 0 2px var(--accent);
 }

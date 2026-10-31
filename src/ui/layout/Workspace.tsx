@@ -10,6 +10,7 @@ import {
   fitColumnWidth,
   type Semester,
 } from '../../core/model'
+import { withAlpha } from '../../core/colors'
 import { paintLevels, resolvePalette } from '../../core/schedulePalette'
 import { DeadlinesPage } from '../events/DeadlinesPage'
 import { EventCard } from '../events/EventCard'
@@ -55,6 +56,7 @@ export function Workspace({
     ...data.settings,
     weekGradient: palette.weekGradient,
     monthColors: palette.monthColors,
+    todayColor: palette.todayColor,
   }
   const viewLevels = paintLevels(data.levels, palette.levelColors)
 
@@ -117,6 +119,7 @@ export function Workspace({
           <SemesterGrid
             semester={active}
             settings={viewSettings}
+            pastTextColor={withAlpha(palette.weekGradient.dark, palette.pastTextOpacity)}
             today={today}
             events={events}
             types={data.types}
@@ -156,7 +159,7 @@ export function Workspace({
           active={active}
           settings={data.settings}
           palette={palette}
-          levelCount={data.levels.length}
+          levels={data.levels}
           onDatesChange={(startDate, endDate) =>
             data.updateSemester(active.id, { startDate, endDate })
           }

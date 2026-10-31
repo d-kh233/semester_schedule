@@ -16,7 +16,7 @@ const saved = (page: Page) => expect(page.getByTestId('save-state')).toHaveText(
 const variants = (page: Page) => page.locator('.auto-palette__variant')
 const month = (page: Page) => page.getByTestId('month-2026-10')
 const block = (page: Page): Locator =>
-  page.locator('[data-testid^="block-2026-10-"]').filter({ hasText: 'Матан КР' })
+  page.locator('[data-testid^="block-2026-12-"]').filter({ hasText: 'Англ КР' })
 
 const DEFAULT_MONTH = 'rgb(201, 154, 120)'
 const DEFAULT_LEVEL_1 = 'rgb(192, 80, 45)'
@@ -233,4 +233,82 @@ test('название сохранённой палитры: пустое и п
   await page.getByTestId('saved-delete-yes').click()
   await expect(page.getByTestId('saved-Весна')).toHaveCount(0)
   await saved(page)
+})
+
+const pastBlock = (page: Page): Locator =>
+  page.locator('[data-testid^="block-2026-10-"]').filter({ hasText: 'Матан КР' })
+
+test('прошедший блок: фон как у пустой ячейки, текст слабый по цвету палитры', async ({ page }) => {
+  await openDemo(page)
+  await expect(pastBlock(page)).toHaveClass(/block--past/)
+  await expect(pastBlock(page)).toHaveCSS('background-color', 'rgb(255, 255, 255)')
+  // тёмный цвет дней недели по умолчанию #4a1824 и прозрачность 35%
+  await expect(pastBlock(page)).toHaveCSS('color', 'rgba(74, 24, 36, 0.35)')
+  // блок, который ещё идёт, с цветом важности и обычным текстом
+  await expect(block(page)).not.toHaveClass(/block--past/)
+})
+
+test('прозрачность текста прошедших блоков: образец и сетка меняются сразу, у каждого расписания своя', async ({
+  page,
+}) => {
+  await openDemo(page)
+  await openSettings(page)
+  const sample = page.getByTestId('past-sample-block')
+  await expect(sample).toHaveCSS('color', 'rgba(74, 24, 36, 0.35)')
+  await page.getByTestId('past-opacity').fill('80')
+  await expect(page.getByTestId('past-opacity-value')).toHaveText('80%')
+  await expect(sample).toHaveCSS('color', 'rgba(74, 24, 36, 0.8)')
+  await saved(page)
+  await closeSettings(page)
+  await expect(pastBlock(page)).toHaveCSS('color', 'rgba(74, 24, 36, 0.8)')
+
+  await page.reload()
+  await expect(pastBlock(page)).toHaveCSS('color', 'rgba(74, 24, 36, 0.8)')
+  await page.getByTestId('schedule-select').selectOption({ label: 'Моё расписание' })
+  await openSettings(page)
+  await expect(page.getByTestId('past-opacity-value')).toHaveText('35%')
+})
+
+test('цвет «сегодня» у каждого расписания свой', async ({ page }) => {
+  await openDemo(page)
+  await expect(page.locator('.head--today')).toHaveCSS('background-color', 'rgb(74, 24, 36)')
+  await openSettings(page)
+  await page.getByTestId('today-color').fill('#00aa55')
+  await saved(page)
+  await closeSettings(page)
+  await expect(page.locator('.head--today')).toHaveCSS('background-color', 'rgb(0, 170, 85)')
+  await page.getByTestId('schedule-select').selectOption({ label: 'Моё расписание' })
+  await expect(page.locator('.head--today')).toHaveCSS('background-color', 'rgb(74, 24, 36)')
+})
+
+test('цвета важности правятся в палитре и подбираются под палитру кнопкой', async ({ page }) => {
+  await openDemo(page)
+  await openSettings(page)
+  await page.getByTestId('level-color-1').fill('#336699')
+  await saved(page)
+  await closeSettings(page)
+  await expect(block(page)).toHaveCSS('background-color', 'rgb(51, 102, 153)')
+  // другое расписание не затронуто
+  await page.getByTestId('schedule-select').selectOption({ label: 'Моё расписание' })
+  await openSettings(page)
+  await expect(page.getByTestId('level-color-1')).toHaveValue('#c0502d')
+  await closeSettings(page)
+  await page.getByTestId('schedule-select').selectOption({ label: 'Демо (демо)' })
+
+  await openSettings(page)
+  await page.getByTestId('match-levels').click()
+  await saved(page)
+  await expect(page.getByTestId('level-color-1')).not.toHaveValue('#336699')
+  await closeSettings(page)
+  await expect(block(page)).not.toHaveCSS('background-color', 'rgb(51, 102, 153)')
+})
+
+test('автосборка подстраивает цвет «сегодня» под палитру, прозрачность остаётся', async ({ page }) => {
+  await openDemo(page)
+  await openSettings(page)
+  await page.getByTestId('today-color').fill('#00aa55')
+  await page.getByTestId('past-opacity').fill('60')
+  await page.getByTestId('variant-apply-0').click()
+  await expect(page.getByTestId('today-auto')).toBeChecked()
+  await expect(page.getByTestId('past-opacity-value')).toHaveText('60%')
 })

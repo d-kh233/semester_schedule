@@ -4,6 +4,7 @@ import {
   isHexColor,
   mixHex,
   weekdayColor,
+  withAlpha,
   weekdayWeight,
 } from '../../src/core/colors'
 
@@ -72,5 +73,12 @@ describe('contrastText', () => {
     expect(contrastText('#7d3040')).toBe('#ffffff')
     expect(contrastText('#ffffff')).toBe('#1f1f1f')
     expect(contrastText('#f8dfc8')).toBe('#1f1f1f')
+  })
+})
+
+describe('withAlpha', () => {
+  it('переводит цвет в rgba с заданной прозрачностью', () => {
+    expect(withAlpha('#ff8000', 0.5)).toBe('rgba(255, 128, 0, 0.5)')
+    expect(withAlpha('#000000', 1)).toBe('rgba(0, 0, 0, 1)')
   })
 })

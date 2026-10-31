@@ -1,7 +1,7 @@
 import { useMemo, useState, type CSSProperties, type PointerEvent, type RefObject } from 'react'
 import { buildCalendar, getDayTiming, weekNumber, type CalendarDay } from '../../core/calendar'
 import type { EventType, ImportanceLevel, Subject } from '../../core/catalog'
-import { contrastText, weekdayColor, weekdayTextColor } from '../../core/colors'
+import { contrastText, resolveTodayColor, weekdayColor, weekdayTextColor } from '../../core/colors'
 import { toggleHiddenMonth, visibleMonths } from '../../core/hiddenMonths'
 import { DEFAULT_CROWDED_DAYS } from '../../core/crowded'
 import { parseIsoDate, type IsoDate } from '../../core/dates'
@@ -31,6 +31,8 @@ interface Props {
   events: EventRecord[]
   types: EventType[]
   levels: ImportanceLevel[]
+  // Цвет текста прошедших блоков (с прозрачностью, из палитры расписания)
+  pastTextColor: string
   subjects: Subject[]
   // Прокручиваемая область: нужна верхней панели, чтобы вписать ширину в окно
   scrollRef: RefObject<HTMLDivElement | null>
@@ -66,6 +68,7 @@ export function SemesterGrid({
   events,
   types,
   levels,
+  pastTextColor,
   subjects,
   scrollRef,
   onWeekNumberChange,
@@ -141,9 +144,13 @@ export function SemesterGrid({
     window.addEventListener('pointerup', up)
   }
 
-  const gridStyle: CSSProperties = {
+  const todayColor = resolveTodayColor(settings.todayColor, settings.weekGradient)
+  const gridStyle = {
+    '--today': todayColor,
+    '--today-text': contrastText(todayColor),
+    '--past-text': pastTextColor,
     gridTemplateColumns: [widths.month, ...widths.columns].map((w) => `${w}px`).join(' '),
-  }
+  } as CSSProperties
 
   return (
     <div className="grid-wrap">

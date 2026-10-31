@@ -634,3 +634,40 @@ button.btn--active {
 .auto-palette__row--months .auto-palette__swatch {
   flex: 0 0 calc(16.66% - 2px);
 }
+
+.past-sample {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.past-sample label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.past-sample__cells {
+  display: flex;
+  gap: 4px;
+}
+
+.past-sample__cells > * {
+  box-sizing: border-box;
+  width: 140px;
+  height: 52px;
+  border-bottom: 2px solid #b8b8c4;
+  background: #fff;
+}
+
+.past-sample__empty {
+  padding: 4px;
+  font-size: 11px;
+  color: #999;
+}
+
+.past-sample__cells > .past-sample__block {
+  margin: 0;
+  border: 1px solid #e3e3ea;
+}

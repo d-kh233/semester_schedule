@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import type { PaletteVariant } from '../../core/autoPalette'
 import {
   validatePaletteName,
   type SavedPalette,
@@ -13,7 +12,7 @@ interface Props {
   // Палитра открытого расписания: её можно сохранить
   current: SchedulePalette
   onSave: (name: string, palette: SchedulePalette) => void
-  onApply: (palette: PaletteVariant) => void
+  onApply: (palette: SchedulePalette) => void
   onDelete: (id: string) => void
 }
 

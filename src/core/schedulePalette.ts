@@ -11,6 +11,10 @@ export interface SchedulePalette {
   monthColors: string[]
   // Цвет уровня с номером i + 1
   levelColors: string[]
+  // Свой цвет сегодняшнего дня; null — подбирается по палитре (тёмный цвет дней недели)
+  todayColor: string | null
+  // Непрозрачность текста прошедших блоков: чем меньше, тем слабее виден текст
+  pastTextOpacity: number
 }
 
 export interface SavedPalette {
@@ -20,6 +24,14 @@ export interface SavedPalette {
 }
 
 export const MAX_PALETTE_NAME_LENGTH = 40
+export const MIN_PAST_TEXT_OPACITY = 0.1
+export const MAX_PAST_TEXT_OPACITY = 1
+export const DEFAULT_PAST_TEXT_OPACITY = 0.35
+
+export function clampPastOpacity(value: number): number {
+  if (!Number.isFinite(value)) return DEFAULT_PAST_TEXT_OPACITY
+  return Math.min(MAX_PAST_TEXT_OPACITY, Math.max(MIN_PAST_TEXT_OPACITY, Math.round(value * 100) / 100))
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -46,13 +58,23 @@ export function parseSchedulePalette(raw: unknown): SchedulePalette | null {
   if (!isRecord(raw)) return null
   const weekGradient = parseGradient(raw.weekGradient)
   if (!weekGradient || !isHexList(raw.monthColors, 12) || !isHexList(raw.levelColors)) return null
-  return { weekGradient, monthColors: raw.monthColors, levelColors: raw.levelColors }
+  const today = raw.todayColor
+  return {
+    weekGradient,
+    monthColors: raw.monthColors,
+    levelColors: raw.levelColors,
+    todayColor: typeof today === 'string' && isHexColor(today) ? today : null,
+    pastTextOpacity:
+      typeof raw.pastTextOpacity === 'number'
+        ? clampPastOpacity(raw.pastTextOpacity)
+        : DEFAULT_PAST_TEXT_OPACITY,
+  }
 }
 
 // Палитра, которой пользуется расписание: своя, а если её нет, то общие цвета
 export function resolvePalette(
   own: SchedulePalette | null,
-  shared: { weekGradient: WeekGradient; monthColors: string[] },
+  shared: { weekGradient: WeekGradient; monthColors: string[]; todayColor: string | null },
   levels: ImportanceLevel[],
 ): SchedulePalette {
   if (own) return own
@@ -60,7 +82,18 @@ export function resolvePalette(
     weekGradient: shared.weekGradient,
     monthColors: shared.monthColors,
     levelColors: sortLevels(levels).map((l) => l.color),
+    todayColor: shared.todayColor,
+    pastTextOpacity: DEFAULT_PAST_TEXT_OPACITY,
   }
+}
+
+// Вариант автосборки применяется к палитре расписания: цвет «сегодня» подбирается заново
+// по новой палитре, прозрачность текста прошедших блоков остаётся прежней
+export function withVariant(
+  current: SchedulePalette,
+  variant: Pick<SchedulePalette, 'weekGradient' | 'monthColors' | 'levelColors'>,
+): SchedulePalette {
+  return { ...variant, todayColor: null, pastTextOpacity: current.pastTextOpacity }
 }
 
 // Уровни с цветами палитры (по порядку); уровень без цвета в палитре остаётся как был

@@ -1,4 +1,5 @@
 import type { Semester } from '../../core/model'
+import type { ImportanceLevel } from '../../core/catalog'
 import type { SchedulePalette } from '../../core/schedulePalette'
 import type { Settings } from '../../core/settings'
 import { ru } from '../../i18n/ru'
@@ -12,7 +13,7 @@ interface Props {
   active: Semester
   settings: Settings
   palette: SchedulePalette
-  levelCount: number
+  levels: ImportanceLevel[]
   onDatesChange: (start: string, end: string) => void
   onSettingsChange: (patch: Partial<Settings>) => void
   onPaletteChange: (palette: SchedulePalette) => void
@@ -43,7 +44,7 @@ export function SettingsDialog(props: Props) {
         settings={props.settings}
         scheduleName={active.name}
         palette={props.palette}
-        levelCount={props.levelCount}
+        levels={props.levels}
         onSettingsChange={props.onSettingsChange}
         onPaletteChange={props.onPaletteChange}
       />

@@ -95,6 +95,12 @@ export function weekdayTextColor(weekdayIndex: number, gradient: WeekGradient): 
   return contrastText(weekdayColor(weekdayIndex, gradient))
 }
 
+// Цвет с прозрачностью для CSS: #ff8000 и 0.5 дают rgba(255, 128, 0, 0.5)
+export function withAlpha(hex: string, alpha: number): string {
+  const [r, g, b] = channels(hex)
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
 // Цвет «сегодня»: свой, если задан, иначе тёмный цвет градиента недели (подстраивается под палитру)
 export function resolveTodayColor(custom: string | null, gradient: WeekGradient): string {
   return custom !== null && isHexColor(custom) ? custom : gradient.dark

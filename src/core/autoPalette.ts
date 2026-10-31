@@ -54,11 +54,11 @@ function monthColor(base: string, monthIndex: number): string {
   const { season, position } = seasonOfMonth(monthIndex)
   const centre = SEASON_LIGHTNESS[season] ?? 0.6
   const lightness = centre + (1 - position) * MONTH_STEP
-  return hslToHex(hexToHsl(base)[0], saturationOf(base, 0.3, 0.8), lightness)
+  return hslToHex(hexToHsl(base)[0], saturationOf(base, 0.18, 0.45), lightness)
 }
 
 // Уровень 1 самый яркий и тёмный, каждый следующий светлее
-function levelColors(base: string, count: number): string[] {
+export function levelColorsFromBase(base: string, count: number): string[] {
   const [hue] = hexToHsl(base)
   const saturation = saturationOf(base, 0.4, 0.85)
   return Array.from({ length: count }, (_, i) => {
@@ -116,7 +116,7 @@ export function buildPaletteVariants(baseColors: string[], levelCount: number): 
       monthColors: Array.from({ length: 12 }, (_, month) =>
         monthColor(seasonBase(seasonOfMonth(month).season), month),
       ),
-      levelColors: levelColors(pick(shift + 1), levels),
+      levelColors: levelColorsFromBase(pick(shift + 1), levels),
     }
   })
 }

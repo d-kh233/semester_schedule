@@ -37,7 +37,10 @@ export function EventBlock({ block, monthKey, firstRow, mutePast, onOpen }: Prop
   const style: CSSProperties = {
     gridRow: firstRow + block.row,
     gridColumn: `${block.startDay + 1} / ${block.endDay + 2}`,
-    ...(block.color !== null ? { background: block.color, color: contrastText(block.color) } : {}),
+    // Прошедший блок рисуется как пустая ячейка со слабым текстом (стиль block--past)
+    ...(block.color !== null && !(mutePast && block.past)
+      ? { background: block.color, color: contrastText(block.color) }
+      : {}),
   }
   // На телефоне открывается одним касанием, мышью — двойным щелчком
   const onClick = (event: MouseEvent) => {

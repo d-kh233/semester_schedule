@@ -4,6 +4,7 @@ import {
   MAX_BASE_COLORS,
   MIN_BASE_COLORS,
   seasonOfMonth,
+  levelColorsFromBase,
   validateBaseColors,
   variantCount,
   weekdayColorsFromBases,
@@ -154,6 +155,19 @@ describe('buildPaletteVariants', () => {
   it('дни недели одинаковы во всех вариантах: порядок базовых цветов задаёт пользователь', () => {
     const variants = buildPaletteVariants(take(4), 3)
     for (const v of variants) expect(v.weekGradient).toEqual(variants[0]?.weekGradient)
+  })
+
+  it('цвета месяцев приглушённые: насыщенность не выше 0.45', () => {
+    for (const variant of buildPaletteVariants(['#ff0000', '#00ff00', '#0000ff'], 3)) {
+      for (const color of variant.monthColors) expect(hexToHsl(color)[1]).toBeLessThanOrEqual(0.46)
+    }
+  })
+
+  it('цвета важности под палитру: levelColorsFromBase даёт цвет на каждый уровень, светлее к концу', () => {
+    const colors = levelColorsFromBase('#e0a45e', 4)
+    expect(colors).toHaveLength(4)
+    const l = colors.map((c) => hexToHsl(c)[2])
+    expect(l[3]).toBeGreaterThan(l[0] ?? 1)
   })
 
   it('результат не зависит от часов и случайности: два вызова дают одно и то же', () => {

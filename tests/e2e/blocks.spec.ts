@@ -105,9 +105,10 @@ test('BR-3: цвет блока по важности, хакатон своим
   page,
 }) => {
   await openDemo(page)
-  // КР по типу — важность 1 (#c0502d), СИИБД КР с ручной 3 (#f5dcc4), хакатон #f0a03c
-  await expect(blockOf(page, '2026-10', 'Матан КР')).toHaveCSS('background-color', 'rgb(192, 80, 45)')
-  await expect(blockOf(page, '2026-10', 'СИИБД КР')).toHaveCSS('background-color', 'rgb(245, 220, 196)')
+  // Ещё не прошедшие: КР по типу — важность 1 (#c0502d), тест — важность 3 (#f5dcc4), хакатон #f0a03c.
+  // Прошедшие блоки цвета важности не показывают: у них фон пустой ячейки (см. palette.spec.ts)
+  await expect(blockOf(page, '2026-12', 'Англ КР')).toHaveCSS('background-color', 'rgb(192, 80, 45)')
+  await expect(blockOf(page, '2026-11', 'Англ тест')).toHaveCSS('background-color', 'rgb(245, 220, 196)')
   await expect(blockOf(page, '2026-10', 'Хакатон')).toHaveCSS('background-color', 'rgb(240, 160, 60)')
   const plain = blockOf(page, '2026-10', 'Лаба')
   await expect(plain).toHaveClass(/block--plain/)

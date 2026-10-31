@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  clampPastOpacity,
+  DEFAULT_PAST_TEXT_OPACITY,
+  withVariant,
   paintLevels,
   parseSavedPalettes,
   parseSchedulePalette,
@@ -16,6 +19,8 @@ const palette: SchedulePalette = {
   weekGradient: { light: '#ffffff', dark: '#000000' },
   monthColors: months,
   levelColors: ['#111111', '#222222', '#333333'],
+  todayColor: null,
+  pastTextOpacity: 0.35,
 }
 const levels = [
   { id: 'b', number: 2, name: 'Два', color: '#bbbbbb', order: 2 },
@@ -43,6 +48,43 @@ describe('parseSchedulePalette', () => {
   })
 })
 
+describe('новые поля палитры: цвет «сегодня» и прозрачность текста прошедших блоков', () => {
+  const old = { weekGradient: palette.weekGradient, monthColors: months, levelColors: ['#111111'] }
+
+  it('палитра без этих полей (сохранена раньше) читается со значениями по умолчанию', () => {
+    const parsed = parseSchedulePalette(old)
+    expect(parsed?.todayColor).toBeNull()
+    expect(parsed?.pastTextOpacity).toBe(DEFAULT_PAST_TEXT_OPACITY)
+  })
+  it('верные значения сохраняются', () => {
+    const parsed = parseSchedulePalette({ ...old, todayColor: '#ff0000', pastTextOpacity: 0.6 })
+    expect(parsed?.todayColor).toBe('#ff0000')
+    expect(parsed?.pastTextOpacity).toBe(0.6)
+  })
+  it('неверный цвет «сегодня» даёт null, неверная прозрачность — значение по умолчанию', () => {
+    const parsed = parseSchedulePalette({ ...old, todayColor: 'red', pastTextOpacity: 'x' })
+    expect(parsed?.todayColor).toBeNull()
+    expect(parsed?.pastTextOpacity).toBe(DEFAULT_PAST_TEXT_OPACITY)
+  })
+  it('прозрачность ограничивается: от 0.1 до 1', () => {
+    expect(clampPastOpacity(0)).toBe(0.1)
+    expect(clampPastOpacity(5)).toBe(1)
+    expect(clampPastOpacity(0.5)).toBe(0.5)
+    expect(clampPastOpacity(Number.NaN)).toBe(DEFAULT_PAST_TEXT_OPACITY)
+  })
+  it('выбранный вариант автосборки: цвет «сегодня» подбирается по палитре, прозрачность остаётся своя', () => {
+    const current = { ...palette, todayColor: '#ff0000', pastTextOpacity: 0.7 }
+    const next = withVariant(current, {
+      weekGradient: { light: '#eeeeee', dark: '#222222' },
+      monthColors: months,
+      levelColors: ['#aaaaaa'],
+    })
+    expect(next.todayColor).toBeNull()
+    expect(next.pastTextOpacity).toBe(0.7)
+    expect(next.levelColors).toEqual(['#aaaaaa'])
+  })
+})
+
 describe('resolvePalette', () => {
   it('у расписания своя палитра: берётся она', () => {
     expect(resolvePalette(palette, defaultSettings, levels)).toEqual(palette)
@@ -52,6 +94,8 @@ describe('resolvePalette', () => {
     expect(result.weekGradient).toEqual(defaultSettings.weekGradient)
     expect(result.monthColors).toEqual(defaultSettings.monthColors)
     expect(result.levelColors).toEqual(['#aaaaaa', '#bbbbbb', '#cccccc', '#dddddd'])
+    expect(result.todayColor).toBe(defaultSettings.todayColor)
+    expect(result.pastTextOpacity).toBe(DEFAULT_PAST_TEXT_OPACITY)
   })
 })
 
