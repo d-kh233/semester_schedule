@@ -2,6 +2,7 @@
 // расписанию (даты, недели, ширины), лежит в модели расписания, см. model.ts.
 
 import { validateBaseColors } from './autoPalette'
+import { parseSavedPalettes, type SavedPalette } from './schedulePalette'
 import { validateSemester } from './calendar'
 import { isHexColor, type WeekGradient } from './colors'
 import { isValidIsoDate, type IsoDate } from './dates'
@@ -16,6 +17,10 @@ export interface Settings {
   nonexistentDays: NonexistentDaysMode
   // Базовые цвета для автосборки палитры (3–7)
   paletteBases: string[]
+  // Свой цвет сегодняшнего дня; null — подбирается по палитре
+  todayColor: string | null
+  // Сохранённые палитры для повторного использования (общие для всех расписаний)
+  savedPalettes: SavedPalette[]
 }
 
 export const defaultSemesterDates = { start: '2026-09-01', end: '2027-01-31' } as const
@@ -39,6 +44,8 @@ export const defaultSettings: Settings = {
   mutePastDays: true,
   nonexistentDays: 'gray',
   paletteBases: ['#7d3040', '#e0a45e', '#9db4cf'],
+  todayColor: null,
+  savedPalettes: [],
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -88,6 +95,9 @@ export function parseSettings(data: unknown): Settings {
         ? data.nonexistentDays
         : defaultSettings.nonexistentDays,
     paletteBases: readPaletteBases(data.paletteBases),
+    todayColor:
+      typeof data.todayColor === 'string' && isHexColor(data.todayColor) ? data.todayColor : null,
+    savedPalettes: parseSavedPalettes(data.savedPalettes),
   }
 }
 

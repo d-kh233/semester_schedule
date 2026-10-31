@@ -5,7 +5,6 @@ import {
   parseEventType,
   parseImportanceLevel,
   parseSubject,
-  recolorLevels,
   sortLevels,
   sortSubjects,
   sortTypes,
@@ -172,30 +171,3 @@ describe('порядок справочников', () => {
   })
 })
 
-describe('recolorLevels', () => {
-  const levels = [
-    { id: 'b', number: 2, name: 'Два', color: '#222222', order: 2 },
-    { id: 'a', number: 1, name: 'Один', color: '#111111', order: 1 },
-    { id: 'c', number: 3, name: 'Три', color: '#333333', order: 3 },
-  ]
-
-  it('красит уровни по порядку номеров и возвращает только изменённые', () => {
-    const changed = recolorLevels(levels, ['#aaaaaa', '#222222', '#cccccc'])
-    expect(changed.map((l) => [l.id, l.color])).toEqual([
-      ['a', '#aaaaaa'],
-      ['c', '#cccccc'],
-    ])
-  })
-
-  it('имена и номера не меняются, лишние цвета игнорируются, недостающие оставляют цвет', () => {
-    const changed = recolorLevels(levels, ['#aaaaaa', '#bbbbbb', '#cccccc', '#dddddd'])
-    expect(changed).toHaveLength(3)
-    expect(changed.find((l) => l.id === 'a')?.name).toBe('Один')
-    expect(recolorLevels(levels, ['#aaaaaa'])).toHaveLength(1)
-  })
-
-  it('исходный список не меняется', () => {
-    recolorLevels(levels, ['#aaaaaa', '#bbbbbb', '#cccccc'])
-    expect(levels[1]?.color).toBe('#111111')
-  })
-})

@@ -10,6 +10,7 @@ import {
   fitColumnWidth,
   type Semester,
 } from '../../core/model'
+import { paintLevels, resolvePalette } from '../../core/schedulePalette'
 import { DeadlinesPage } from '../events/DeadlinesPage'
 import { EventCard } from '../events/EventCard'
 import { EventList } from '../events/EventList'
@@ -47,6 +48,15 @@ export function Workspace({
 }: Props) {
   const [card, setCard] = useState<CardState>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Палитра у каждого расписания своя; пока её нет, действуют общие цвета
+  const palette = resolvePalette(active.palette, data.settings, data.levels)
+  const viewSettings = {
+    ...data.settings,
+    weekGradient: palette.weekGradient,
+    monthColors: palette.monthColors,
+  }
+  const viewLevels = paintLevels(data.levels, palette.levelColors)
 
   const events = data.events.filter((e) => e.semesterId === active.id)
   // Предметы демо не показываются в личном расписании, и наоборот
@@ -106,11 +116,11 @@ export function Workspace({
         <div className="app__view" hidden={view !== 'grid'}>
           <SemesterGrid
             semester={active}
-            settings={data.settings}
+            settings={viewSettings}
             today={today}
             events={events}
             types={data.types}
-            levels={data.levels}
+            levels={viewLevels}
             subjects={subjects}
             scrollRef={scrollRef}
             engine={engine}
@@ -131,7 +141,7 @@ export function Workspace({
             <EventList
               events={events}
               types={data.types}
-              levels={data.levels}
+              levels={viewLevels}
               subjects={subjects}
               onAdd={() => setCard({ eventId: null, date: null })}
               onOpen={(id) => setCard({ eventId: id, date: null })}
@@ -145,12 +155,13 @@ export function Workspace({
           semesters={data.semesters}
           active={active}
           settings={data.settings}
-          levels={data.levels}
+          palette={palette}
+          levelCount={data.levels.length}
           onDatesChange={(startDate, endDate) =>
             data.updateSemester(active.id, { startDate, endDate })
           }
           onSettingsChange={data.updateSettings}
-          onLevelColorsChange={data.setLevelColors}
+          onPaletteChange={(next) => data.updateSemester(active.id, { palette: next })}
           onResetWidths={resetWidths}
           onCreate={data.addSchedule}
           onRename={(id, name) => data.updateSemester(id, { name })}
@@ -165,7 +176,7 @@ export function Workspace({
           event={cardEvent}
           defaultDate={card.date}
           types={data.types}
-          levels={data.levels}
+          levels={viewLevels}
           subjects={subjects}
           onSave={(fields) => data.saveEvent(cardEvent, fields, active.id)}
           onAddSubject={(name, shortName) => data.addSubject(name, shortName, active.isDemo)}

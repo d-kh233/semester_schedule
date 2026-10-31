@@ -4,6 +4,7 @@
 import { firstMondayOnOrAfter, validateSemester } from './calendar'
 import { isValidIsoDate, weekday, type IsoDate } from './dates'
 import { parseHiddenMonths } from './hiddenMonths'
+import { parseSchedulePalette, type SchedulePalette } from './schedulePalette'
 
 export const DAYS_IN_ROW = 31
 export const DEFAULT_COLUMN_WIDTH = 52
@@ -27,6 +28,8 @@ export interface Semester {
   monthColumnWidth: number
   // Скрытые в сетке месяцы («ГГГГ-ММ»); события остаются в базе
   hiddenMonths: string[]
+  // Своя палитра расписания; null — общие цвета из настроек
+  palette: SchedulePalette | null
   isDemo: boolean
   archived: boolean
   createdAt: string
@@ -69,6 +72,7 @@ export function createSemester(input: NewSemesterInput, now: string): Semester {
     columnWidths: Array<number>(DAYS_IN_ROW).fill(DEFAULT_COLUMN_WIDTH),
     monthColumnWidth: DEFAULT_MONTH_COLUMN_WIDTH,
     hiddenMonths: [],
+    palette: null,
     isDemo: input.isDemo ?? false,
     archived: false,
     createdAt: now,
@@ -112,6 +116,7 @@ export function parseSemester(raw: unknown, fallbackNow: string): Semester | nul
         ? clampMonthColumnWidth(raw.monthColumnWidth)
         : DEFAULT_MONTH_COLUMN_WIDTH,
     hiddenMonths: parseHiddenMonths(raw.hiddenMonths),
+    palette: parseSchedulePalette(raw.palette),
     isDemo: raw.isDemo === true,
     archived: raw.archived === true,
     createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : fallbackNow,

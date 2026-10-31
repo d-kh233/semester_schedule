@@ -147,3 +147,90 @@ test('дни недели берут базовые цвета: пн — пер�
   await page.reload()
   await expect(page.getByTestId('weekday-2026-11-3')).toHaveCSS('background-color', 'rgb(51, 102, 153)')
 })
+
+test('палитра применяется только к открытому расписанию, другое не меняется', async ({ page }) => {
+  await openDemo(page)
+  await openSettings(page)
+  await expect(page.getByTestId('palette-scope')).toContainText('«Демо»')
+  await page.getByTestId('variant-apply-0').click()
+  await saved(page)
+  await closeSettings(page)
+  await expect(month(page)).not.toHaveCSS('background-color', DEFAULT_MONTH)
+
+  // «Моё расписание» осталось с прежними цветами
+  await page.getByTestId('schedule-select').selectOption({ label: 'Моё расписание' })
+  await expect(page.getByTestId('month-2026-10')).toHaveCSS('background-color', DEFAULT_MONTH)
+  await expect(page.getByTestId('weekday-2026-11-2')).not.toHaveCSS('background-color', 'rgb(125, 48, 64)')
+
+  // после перезагрузки у каждого расписания своя палитра
+  await page.reload()
+  await expect(page.getByTestId('month-2026-10')).toHaveCSS('background-color', DEFAULT_MONTH)
+  await page.getByTestId('schedule-select').selectOption({ label: 'Демо (демо)' })
+  await expect(month(page)).not.toHaveCSS('background-color', DEFAULT_MONTH)
+})
+
+test('ручная правка цвета тоже относится только к своему расписанию', async ({ page }) => {
+  await openDemo(page)
+  await openSettings(page)
+  await page.getByLabel('Октябрь', { exact: true }).fill('#336699')
+  await saved(page)
+  await closeSettings(page)
+  await expect(month(page)).toHaveCSS('background-color', 'rgb(51, 102, 153)')
+  await page.getByTestId('schedule-select').selectOption({ label: 'Моё расписание' })
+  await expect(page.getByTestId('month-2026-10')).toHaveCSS('background-color', DEFAULT_MONTH)
+})
+
+test('сохранённая палитра: сохранить, применить к другому расписанию, пережить перезагрузку', async ({
+  page,
+}) => {
+  await openDemo(page)
+  await openSettings(page)
+  await page.getByTestId('variant-apply-1').click()
+  await page.getByTestId('saved-name').fill('Осень')
+  await page.getByTestId('saved-save').click()
+  await expect(page.getByTestId('saved-Осень')).toBeVisible()
+  await saved(page)
+  const demoMonth = await (async () => {
+    await closeSettings(page)
+    return month(page).evaluate((el) => getComputedStyle(el).backgroundColor)
+  })()
+
+  // правка текущей палитры не меняет сохранённую
+  await openSettings(page)
+  await page.getByLabel('Октябрь', { exact: true }).fill('#336699')
+  await saved(page)
+  await closeSettings(page)
+
+  await page.reload()
+  await page.getByTestId('schedule-select').selectOption({ label: 'Моё расписание' })
+  await expect(page.getByTestId('month-2026-10')).toHaveCSS('background-color', DEFAULT_MONTH)
+  await openSettings(page)
+  await expect(page.getByTestId('saved-Осень')).toBeVisible()
+  await page.getByTestId('saved-Осень').getByTestId('saved-apply').click()
+  await saved(page)
+  await closeSettings(page)
+  await expect(page.getByTestId('month-2026-10')).toHaveCSS('background-color', demoMonth)
+})
+
+test('название сохранённой палитры: пустое и повтор — ошибка; удаление только с подтверждением', async ({
+  page,
+}) => {
+  await openDemo(page)
+  await openSettings(page)
+  await page.getByTestId('saved-save').click()
+  await expect(page.getByRole('alert')).toContainText('Введите название')
+  await page.getByTestId('saved-name').fill('Весна')
+  await page.getByTestId('saved-save').click()
+  await expect(page.getByTestId('saved-Весна')).toBeVisible()
+  await page.getByTestId('saved-name').fill('весна')
+  await page.getByTestId('saved-save').click()
+  await expect(page.getByRole('alert')).toContainText('уже есть')
+
+  await page.getByTestId('saved-delete').click()
+  await page.getByRole('button', { name: 'Нет' }).click()
+  await expect(page.getByTestId('saved-Весна')).toBeVisible()
+  await page.getByTestId('saved-delete').click()
+  await page.getByTestId('saved-delete-yes').click()
+  await expect(page.getByTestId('saved-Весна')).toHaveCount(0)
+  await saved(page)
+})

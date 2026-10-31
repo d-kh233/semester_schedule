@@ -11,8 +11,6 @@ import { ru } from '../../i18n/ru'
 
 interface Props {
   baseColors: string[]
-  // Текущая палитра, чтобы после «Применить» её можно было вернуть
-  current: PaletteVariant
   levelCount: number
   onBaseColorsChange: (colors: string[]) => void
   onApply: (variant: PaletteVariant) => void
@@ -26,7 +24,7 @@ function Swatch({ color, label }: { color: string; label?: string }) {
   )
 }
 
-function VariantPreview({ variant }: { variant: PaletteVariant }) {
+export function PalettePreview({ variant }: { variant: PaletteVariant }) {
   return (
     <div className="auto-palette__preview">
       <div className="auto-palette__row" aria-label={ru.palette.auto.previewWeek}>
@@ -48,10 +46,9 @@ function VariantPreview({ variant }: { variant: PaletteVariant }) {
   )
 }
 
-export function AutoPalette({ baseColors, current, levelCount, onBaseColorsChange, onApply }: Props) {
+export function AutoPalette({ baseColors, levelCount, onBaseColorsChange, onApply }: Props) {
   // Набор может быть временно неверным (повтор цвета); сохраняем в настройки только верный
   const [draft, setDraft] = useState(baseColors)
-  const [previous, setPrevious] = useState<PaletteVariant | null>(null)
 
   const error = validateBaseColors(draft)
   const variants = useMemo(() => buildPaletteVariants(draft, levelCount), [draft, levelCount])
@@ -59,11 +56,6 @@ export function AutoPalette({ baseColors, current, levelCount, onBaseColorsChang
   function change(next: string[]) {
     setDraft(next)
     if (validateBaseColors(next) === null) onBaseColorsChange(next)
-  }
-
-  function apply(variant: PaletteVariant) {
-    setPrevious(current)
-    onApply(variant)
   }
 
   return (
@@ -107,32 +99,16 @@ export function AutoPalette({ baseColors, current, levelCount, onBaseColorsChang
           {ru.palette.auto.errors[error]}
         </p>
       )}
-      {previous && (
-        <p className="auto-palette__applied" role="status">
-          {ru.palette.auto.applied}{' '}
-          <button
-            type="button"
-            className="btn"
-            data-testid="palette-restore"
-            onClick={() => {
-              onApply(previous)
-              setPrevious(null)
-            }}
-          >
-            {ru.palette.auto.restore}
-          </button>
-        </p>
-      )}
       <div className="auto-palette__variants">
         {variants.map((variant, k) => (
           <div key={k} className="auto-palette__variant" data-testid={`variant-${k}`}>
             <strong>{ru.palette.auto.variant(k + 1)}</strong>
-            <VariantPreview variant={variant} />
+            <PalettePreview variant={variant} />
             <button
               type="button"
               className="btn btn--primary"
               data-testid={`variant-apply-${k}`}
-              onClick={() => apply(variant)}
+              onClick={() => onApply(variant)}
             >
               {ru.palette.auto.apply}
             </button>

@@ -94,3 +94,8 @@ export function contrastText(background: string): string {
 export function weekdayTextColor(weekdayIndex: number, gradient: WeekGradient): string {
   return contrastText(weekdayColor(weekdayIndex, gradient))
 }
+
+// Цвет «сегодня»: свой, если задан, иначе тёмный цвет градиента недели (подстраивается под палитру)
+export function resolveTodayColor(custom: string | null, gradient: WeekGradient): string {
+  return custom !== null && isHexColor(custom) ? custom : gradient.dark
+}

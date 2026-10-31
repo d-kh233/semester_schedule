@@ -98,16 +98,6 @@ export function buildDefaultCatalog(newId: () => string): {
 // Цвета уровней 1–3 по умолчанию (кнопка «Вернуть цвета по умолчанию»)
 export const DEFAULT_LEVEL_COLORS = ['#c0502d', '#f6d98f', '#f5dcc4'] as const
 
-// Красит уровни по порядку (colors[0] — первый уровень). Возвращает только изменившиеся уровни.
-export function recolorLevels(levels: ImportanceLevel[], colors: readonly string[]): ImportanceLevel[] {
-  const changed: ImportanceLevel[] = []
-  sortLevels(levels).forEach((level, i) => {
-    const color = colors[i]
-    if (color !== undefined && color !== level.color) changed.push({ ...level, color })
-  })
-  return changed
-}
-
 export type SubjectError = 'name-empty' | 'short-empty' | 'short-spaces' | 'short-duplicate'
 
 export function validateSubject(
