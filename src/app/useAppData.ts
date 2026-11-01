@@ -9,6 +9,7 @@ import {
   type ImportanceLevel,
   type Subject,
 } from '../core/catalog'
+import { mergeBackup, type BackupData, type BackupMerge } from '../core/backup'
 import type { IsoDate } from '../core/dates'
 import { createEvent, type EventFields, type EventRecord } from '../core/events'
 import { canDeleteLevel, canDeleteType, type DeleteBlock } from '../core/catalogRules'
@@ -30,6 +31,7 @@ import {
   loadAll,
   openAppDb,
   putActiveSemesterId,
+  putBackup,
   putEvent,
   putEventType,
   putLevels,
@@ -539,6 +541,42 @@ export function useAppData() {
     [apply, persist],
   )
 
+  // Данные для слияния с выгрузкой (настройки не трогаются)
+  const currentBackup = useCallback(
+    (): BackupData => ({
+      semesters: stateRef.current.semesters,
+      events: stateRef.current.events,
+      types: stateRef.current.types,
+      levels: stateRef.current.levels,
+      subjects: stateRef.current.subjects,
+    }),
+    [],
+  )
+
+  const previewBackup = useCallback(
+    (incoming: BackupData): BackupMerge => mergeBackup(currentBackup(), incoming),
+    [currentBackup],
+  )
+
+  // Загрузка из выгрузки: добавляет и обновляет по id, ничего не удаляет
+  const restoreBackup = useCallback(
+    (incoming: BackupData): BackupMerge => {
+      const current = stateRef.current
+      const merge = mergeBackup(currentBackup(), incoming)
+      apply({
+        ...current,
+        semesters: merge.data.semesters,
+        events: merge.data.events,
+        types: sortTypes(merge.data.types),
+        levels: sortLevels(merge.data.levels),
+        subjects: sortSubjects(merge.data.subjects),
+      })
+      persist((db) => putBackup(db, merge.written))
+      return merge
+    },
+    [apply, currentBackup, persist],
+  )
+
   const active = state.semesters.find((s) => s.id === state.activeId) ?? null
 
   return {
@@ -570,5 +608,7 @@ export function useAppData() {
     deleteType,
     renameLevel,
     deleteLevel,
+    previewBackup,
+    restoreBackup,
   }
 }

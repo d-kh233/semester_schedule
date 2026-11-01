@@ -207,6 +207,7 @@ export function Workspace({
           onArchive={data.archiveSchedule}
           onRestore={data.restoreSchedule}
           onExport={exportExcel}
+          backup={{ preview: data.previewBackup, restore: data.restoreBackup }}
           onClose={() => onSettingsOpenChange(false)}
         />
       )}

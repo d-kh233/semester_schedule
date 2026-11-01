@@ -12,6 +12,7 @@ import {
   type ImportanceLevel,
   type Subject,
 } from '../core/catalog'
+import type { BackupData } from '../core/backup'
 import { parseEvent, type EventRecord } from '../core/events'
 import { parseSemester, type Semester } from '../core/model'
 import { parseSettings, type Settings } from '../core/settings'
@@ -170,5 +171,16 @@ export async function putSeed(db: AppDb, data: SeedWrite): Promise<void> {
   for (const e of data.events) void tx.objectStore('events').put(e)
   if (data.catalogSeeded) void tx.objectStore('meta').put('1', CATALOG_SEEDED_KEY)
   if (data.demoSeeded) void tx.objectStore('meta').put('1', DEMO_SEEDED_KEY)
+  await tx.done
+}
+
+// Записывает восстановленные записи одной транзакцией. Ничего не удаляет.
+export async function putBackup(db: AppDb, data: BackupData): Promise<void> {
+  const tx = db.transaction(['semesters', 'events', 'eventTypes', 'importanceLevels', 'subjects'], 'readwrite')
+  for (const s of data.semesters) void tx.objectStore('semesters').put(s)
+  for (const e of data.events) void tx.objectStore('events').put(e)
+  for (const t of data.types) void tx.objectStore('eventTypes').put(t)
+  for (const l of data.levels) void tx.objectStore('importanceLevels').put(l)
+  for (const s of data.subjects) void tx.objectStore('subjects').put(s)
   await tx.done
 }

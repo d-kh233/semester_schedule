@@ -2,6 +2,7 @@ import type { Semester } from '../../core/model'
 import type { EventType, ImportanceLevel } from '../../core/catalog'
 import type { DeleteBlock } from '../../core/catalogRules'
 import type { TypeFields } from '../../app/useAppData'
+import type { BackupData, BackupMerge } from '../../core/backup'
 import type { SchedulePalette } from '../../core/schedulePalette'
 import type { Settings } from '../../core/settings'
 import { ru } from '../../i18n/ru'
@@ -9,6 +10,7 @@ import { Modal } from '../common/Modal'
 import { ScheduleManager } from '../schedules/ScheduleManager'
 import { CatalogControls } from './CatalogControls'
 import { ExportControls } from './ExportControls'
+import { ImportBackupControls } from './ImportBackupControls'
 import { PaletteControls } from './PaletteControls'
 import { SemesterControls } from './SemesterControls'
 
@@ -36,6 +38,10 @@ interface Props {
   onArchive: (id: string) => void
   onRestore: (id: string) => void
   onExport: (scheduleIds: string[], includeService: boolean) => void
+  backup: {
+    preview: (incoming: BackupData) => BackupMerge
+    restore: (incoming: BackupData) => BackupMerge
+  }
   onClose: () => void
 }
 
@@ -48,6 +54,7 @@ export function SettingsDialog(props: Props) {
         defaultId={active.id}
         onExport={props.onExport}
       />
+      <ImportBackupControls preview={props.backup.preview} restore={props.backup.restore} />
       <h3>{ru.settings.semesterTitle}</h3>
       <SemesterControls
         key={`controls-${active.id}`}
