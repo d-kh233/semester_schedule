@@ -30,7 +30,7 @@ const FONT_SIZE = 9
 const LINE_HEIGHT = 12
 // Примерно столько символов влезает в строку клетки шириной DAY_COLUMN_WIDTH
 const CHARS_PER_LINE = 7
-const GREY = 'FFE7E6E6'
+const GREY = '#E7E6E6'
 const SHEET_NAME_LIMIT = 31
 const FORBIDDEN_SHEET_CHARS = /[[\]:*?/\\]/g
 
@@ -102,11 +102,6 @@ function writeCalendarSheet(
   let r = 2
   for (const month of calendar.months) {
     const weekRow = ws.getRow(r)
-    const monthCell = weekRow.getCell(1)
-    monthCell.value = `${ru.months[month.month - 1]} ${month.year}`
-    monthCell.fill = fill(month.monthColor)
-    monthCell.font = { bold: true, size: FONT_SIZE, color: { argb: argb(contrastText(month.monthColor)) } }
-    monthCell.alignment = { vertical: 'middle', wrapText: true }
     month.weekdays.forEach((weekday, i) => {
       const cell = weekRow.getCell(FIRST_DAY_COLUMN + i)
       const color = month.weekdayColors[i]
@@ -123,6 +118,7 @@ function writeCalendarSheet(
     weekRow.height = LINE_HEIGHT + 2
     r++
 
+    const firstRow = r
     for (const row of month.rows) {
       const xrow = ws.getRow(r)
       let lines = 1
@@ -147,6 +143,13 @@ function writeCalendarSheet(
       xrow.height = LINE_HEIGHT * lines + 2
       r++
     }
+    // Цвет месяца тянется на все строки месяца, кроме строки с днями недели
+    const label = ws.getCell(firstRow, 1)
+    label.value = `${ru.months[month.month - 1]} ${month.year}`
+    label.fill = fill(month.monthColor)
+    label.font = { bold: true, size: FONT_SIZE, color: { argb: argb(contrastText(month.monthColor)) } }
+    label.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }
+    if (r - 1 > firstRow) ws.mergeCells(firstRow, 1, r - 1, 1)
     r++
   }
   writeDeadlineList(ws, r, buildDeadlineList(events, types))

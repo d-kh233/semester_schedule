@@ -97,8 +97,8 @@ describe('buildExportWorkbook: цвета', () => {
     const october = findCell(ws, 'Октябрь 2026').cell
     expect(october.fill).toMatchObject({ fgColor: { argb: argbOf(palette.monthColors[9]!) } })
     // Первое число октября — четверг: колонка 2 в строке с днями недели
-    // Название месяца и дни недели стоят в одной строке
-    const weekRow = findCell(ws, 'Октябрь 2026').row
+    // Строка с днями недели стоит над названием месяца
+    const weekRow = findCell(ws, 'Октябрь 2026').row - 1
     expect(ws.getCell(weekRow, 2).fill).toMatchObject({
       fgColor: { argb: argbOf(weekdayColor(3, palette.weekGradient)) },
     })
@@ -125,7 +125,9 @@ describe('buildExportWorkbook: листы', () => {
     const ws = wb.getWorksheet('Осень')!
     expect(ws.getCell(1, 2).value).toBe(1)
     expect(ws.getCell(1, 32).value).toBe(31)
-    expect(ws.getCell(2, 1).value).toBe('Сентябрь 2026')
+    expect(ws.getCell(3, 1).value).toBe('Сентябрь 2026')
+    // 31 сентября нет: серая заливка, а не чёрная
+    expect(ws.getCell(2, 32).fill).toMatchObject({ fgColor: { argb: 'FFE7E6E6' } })
     // Октябрь: строка месяца, строка дней недели, потом события. 21 октября — в колонке 22
     const deadline = findCell(ws, 'Матан КР')
     expect(deadline.col).toBe(1 + 21)
