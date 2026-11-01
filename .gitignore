@@ -27,6 +27,8 @@ supabase/.branches
 *.xlsx
 *.xls
 *.csv
+# Образцы таблицы заказчицы
+example_export xlsx/
 
 # Редактор и система
 .vscode
