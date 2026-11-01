@@ -136,6 +136,10 @@ export function Workspace({
         view={view}
         onViewChange={onViewChange}
         onOpenSettings={() => onSettingsOpenChange(true)}
+        onUndo={data.undo}
+        onRedo={data.redo}
+        canUndo={data.canUndo}
+        canRedo={data.canRedo}
       >
         <QuickInput engine={engine} />
       </TopBar>

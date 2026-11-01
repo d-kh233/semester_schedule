@@ -18,6 +18,10 @@ interface Props {
   view: View
   onViewChange: (view: View) => void
   onOpenSettings: () => void
+  onUndo: () => void
+  onRedo: () => void
+  canUndo: boolean
+  canRedo: boolean
   // Строка ввода занимает всю ширину панели
   children: ReactNode
 }
@@ -34,6 +38,10 @@ export function TopBar({
   view,
   onViewChange,
   onOpenSettings,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
   children,
 }: Props) {
   const [confirmResort, setConfirmResort] = useState(false)
@@ -63,6 +71,26 @@ export function TopBar({
           {ru.save[saveState]}
         </span>
         <span className="topbar__spacer" />
+        <button
+          type="button"
+          className="btn"
+          data-testid="undo"
+          title={ru.topbar.undoTitle}
+          disabled={!canUndo}
+          onClick={onUndo}
+        >
+          {ru.topbar.undo}
+        </button>
+        <button
+          type="button"
+          className="btn"
+          data-testid="redo"
+          title={ru.topbar.redoTitle}
+          disabled={!canRedo}
+          onClick={onRedo}
+        >
+          {ru.topbar.redo}
+        </button>
         {view === 'grid' && confirmResort ? (
           <span role="group" aria-label={ru.grid.resort} className="topbar__confirm">
             {ru.grid.resortConfirm}

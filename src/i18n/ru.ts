@@ -23,6 +23,10 @@ export const ru = {
     gridTab: 'Сетка',
     deadlines: 'Список дедлайнов',
     settings: 'Настройки',
+    undo: 'Отменить',
+    redo: 'Вернуть',
+    undoTitle: 'Отменить последнее действие (Ctrl+Z)',
+    redoTitle: 'Вернуть отменённое (Ctrl+Y)',
   },
   settings: {
     title: 'Настройки',

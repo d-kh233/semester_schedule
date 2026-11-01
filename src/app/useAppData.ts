@@ -18,6 +18,13 @@ import {
   type EventRecord,
 } from '../core/events'
 import { canDeleteLevel, canDeleteType, type DeleteBlock } from '../core/catalogRules'
+import {
+  applyChanges,
+  diffEvents,
+  pushHistory,
+  type HistoryEntry,
+  type HistorySide,
+} from '../core/history'
 import { placeLanes, resetLaneIfSpaceChanged } from '../core/layout'
 import { createSemester, pickActiveId, sortSemesters, type Semester } from '../core/model'
 import type { EventChange } from '../core/parser/apply'
@@ -144,6 +151,26 @@ export function useAppData() {
   const dbRef = useRef<AppDb | null>(null)
   const pending = useRef(0)
   const failed = useRef(false)
+  // Журнал отмены: действия с событиями (новые сверху). Повтор доступен, пока не сделано новое действие
+  const undoRef = useRef<HistoryEntry[]>([])
+  const redoRef = useRef<HistoryEntry[]>([])
+  const [history, setHistory] = useState({ undo: 0, redo: 0 })
+
+  const syncHistory = useCallback(() => {
+    setHistory({ undo: undoRef.current.length, redo: redoRef.current.length })
+  }, [])
+
+  // Записывает одно действие в журнал; новое действие отменяет возможность повтора
+  const recordAction = useCallback(
+    (before: EventRecord[], after: EventRecord[]) => {
+      const changes = diffEvents(before, after)
+      if (changes.length === 0) return
+      undoRef.current = pushHistory(undoRef.current, { changes })
+      redoRef.current = []
+      syncHistory()
+    },
+    [syncHistory],
+  )
 
   const apply = useCallback((next: State) => {
     stateRef.current = next
@@ -335,6 +362,7 @@ export function useAppData() {
     (events: EventRecord[], touched: string[], removed: string[] = []) => {
       const current = stateRef.current
       const placed = placeLanes(events, current.types, nowIso(), { yieldIds: new Set(touched) })
+      recordAction(current.events, placed.events)
       apply({ ...current, events: placed.events })
       const writeIds = new Set([...touched, ...placed.changed.map((e) => e.id)])
       const toWrite = placed.events.filter((e) => writeIds.has(e.id))
@@ -343,7 +371,7 @@ export function useAppData() {
         for (const event of toWrite) await putEvent(db, event)
       })
     },
-    [apply, persist],
+    [apply, persist, recordAction],
   )
 
   // Новое событие (existing = null) или правка существующего. Дорожка и архив при правке сохраняются.
@@ -401,13 +429,41 @@ export function useAppData() {
         semesterId,
       })
       if (placed.changed.length === 0) return
+      recordAction(current.events, placed.events)
       apply({ ...current, events: placed.events })
       persist(async (db) => {
         for (const event of placed.changed) await putEvent(db, event)
       })
     },
-    [apply, persist],
+    [apply, persist, recordAction],
   )
+
+  // Отмена и повтор последнего действия с событиями. Отмена создания убирает событие,
+  // как и кнопка «Отменить» в подсказке после ввода (подтверждено заказчицей).
+  const stepHistory = useCallback(
+    (direction: 'undo' | 'redo') => {
+      const from = direction === 'undo' ? undoRef : redoRef
+      const to = direction === 'undo' ? redoRef : undoRef
+      const entry = from.current[from.current.length - 1]
+      if (!entry) return
+      from.current = from.current.slice(0, -1)
+      to.current = pushHistory(to.current, entry)
+      const side: HistorySide = direction === 'undo' ? 'before' : 'after'
+      const current = stateRef.current
+      apply({ ...current, events: applyChanges(current.events, entry.changes, side) })
+      syncHistory()
+      persist(async (db) => {
+        for (const change of entry.changes) {
+          const value = side === 'before' ? change.before : change.after
+          if (value) await putEvent(db, value)
+          else await deleteEventForever(db, change.id)
+        }
+      })
+    },
+    [apply, persist, syncHistory],
+  )
+  const undo = useCallback(() => stepHistory('undo'), [stepHistory])
+  const redo = useCallback(() => stepHistory('redo'), [stepHistory])
 
   const addSubject = useCallback(
     (name: string, shortName: string, demo: boolean): Subject => {
@@ -620,5 +676,9 @@ export function useAppData() {
     deleteLevel,
     previewBackup,
     restoreBackup,
+    undo,
+    redo,
+    canUndo: history.undo > 0,
+    canRedo: history.redo > 0,
   }
 }

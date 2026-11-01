@@ -18,6 +18,26 @@ export function App() {
     return () => document.removeEventListener('visibilitychange', refresh)
   }, [])
 
+  // Ctrl+Z и Ctrl+Y (и Ctrl+Shift+Z) отменяют и возвращают события; в полях ввода работает обычная отмена
+  const { undo, redo } = data
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return
+      const target = e.target as HTMLElement | null
+      if (target?.closest('input, textarea, [contenteditable="true"]')) return
+      const key = e.key.toLowerCase()
+      if (key === 'z' && !e.shiftKey) {
+        e.preventDefault()
+        undo()
+      } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
+        e.preventDefault()
+        redo()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [undo, redo])
+
   const { active } = data
 
   if (!data.ready || !active) {
