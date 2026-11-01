@@ -5,7 +5,7 @@ test-results
 playwright-report
 .vite
 
-# Документы заказчицы и рабочие файлы плана (не коммитить)
+# Документы и рабочие файлы плана (не коммитить)
 CLAUDE.md
 SPEC*.md
 PLAN.md
@@ -27,7 +27,7 @@ supabase/.branches
 *.xlsx
 *.xls
 *.csv
-# Образцы таблицы заказчицы
+# Образцы таблицы
 example_export xlsx/
 
 # Редактор и система

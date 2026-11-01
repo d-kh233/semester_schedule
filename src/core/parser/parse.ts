@@ -244,7 +244,7 @@ export function parseInputLine(
     })
   }
 
-  // Дата ячейки сильнее текста (ответ заказчицы 1.11.2026)
+  // Дата ячейки сильнее текста (решение от 1.11.2026)
   if (options.fixedDate !== undefined) {
     invalidDate = null
     separateGroups = false

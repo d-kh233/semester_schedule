@@ -22,7 +22,7 @@ export const EXPORT_FORMAT_VERSION = 1
 
 const DAY_COLUMNS = 31
 const FIRST_DAY_COLUMN = 2
-// День 7 символов ≈ 54 пикселя, как в таблице заказчицы; масштаб 70% нужен, чтобы 31 день помещался на экране
+// День 7 символов ≈ 54 пикселя, как в образце таблицы; масштаб 70% нужен, чтобы 31 день помещался на экране
 const MONTH_COLUMN_WIDTH = 12
 const DAY_COLUMN_WIDTH = 7
 const ZOOM = 70

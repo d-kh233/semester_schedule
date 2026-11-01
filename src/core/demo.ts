@@ -1,4 +1,4 @@
-// Примеры для демо-расписания: по мотивам тест-кейсов ТЗ и таблицы заказчицы
+// Примеры для демо-расписания: по мотивам тест-кейсов ТЗ и образца таблицы
 
 import { createSubject, type EventType, type Subject } from './catalog'
 import { formatIsoDate, parseIsoDate, type IsoDate } from './dates'
