@@ -8,7 +8,7 @@ async function openDemo(page: Page) {
   await expect(page.getByTestId('month-2026-09')).toBeVisible()
   await page.getByTestId('schedule-select').selectOption({ label: 'Демо (демо)' })
   await openList(page)
-  await expect(page.getByTestId('event-list').getByRole('listitem')).toHaveCount(10)
+  await expect(page.locator('[data-testid="event-list"], [data-testid="someday-list"]').getByRole('listitem')).toHaveCount(10)
   await openGrid(page)
 }
 

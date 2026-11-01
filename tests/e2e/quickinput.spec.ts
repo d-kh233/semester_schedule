@@ -22,7 +22,7 @@ async function saved(page: Page) {
 const input = (page: Page) => page.getByRole('textbox', { name: 'Строка ввода' })
 const toast = (page: Page) => page.getByTestId('input-toast')
 const issue = (page: Page) => page.getByTestId('input-issue')
-const eventRows = (page: Page) => page.getByTestId('event-list').getByRole('listitem')
+const eventRows = (page: Page) => page.locator('[data-testid="event-list"], [data-testid="someday-list"]').getByRole('listitem')
 const row = (page: Page, text: string): Locator => eventRows(page).filter({ hasText: text })
 
 async function enter(page: Page, text: string) {
@@ -296,7 +296,7 @@ test('TC-10: без даты — событие создаётся и показ
   await openDemo(page)
   await enter(page, 'англ тест')
   await expect(toast(page)).toContainText('Создано: Англ. яз. Тест, без даты')
-  await expect(row(page, 'Англ. яз. Тест').filter({ hasText: 'без даты' })).toBeVisible()
+  await expect(page.getByTestId('someday-list')).toContainText('Англ. яз. Тест')
 })
 
 test('переключение расписаний не даёт ошибок в консоли и дубликатов на странице', async ({ page }) => {

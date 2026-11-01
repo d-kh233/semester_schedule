@@ -19,7 +19,7 @@ async function switchTo(page: Page, name: string) {
 
 const dialog = (page: Page) => page.getByRole('dialog', { name: /^(Новое событие|Событие)$/ })
 const row = (page: Page, text: string): Locator =>
-  page.getByTestId('event-list').getByRole('listitem').filter({ hasText: text })
+  page.locator('[data-testid="event-list"], [data-testid="someday-list"]').getByRole('listitem').filter({ hasText: text })
 
 async function addEvent(page: Page, title: string, start: string, end = '') {
   await page.getByRole('button', { name: 'Добавить событие' }).click()
@@ -34,11 +34,12 @@ test('личное расписание пусто, в демо есть при�
   await expect(page.getByText('Событий пока нет')).toBeVisible()
 
   await switchTo(page, 'Демо (демо)')
-  const list = page.getByTestId('event-list').getByRole('listitem')
+  const list = page.locator('[data-testid="event-list"], [data-testid="someday-list"]').getByRole('listitem')
   await expect(list).toHaveCount(10)
   await expect(row(page, 'Хакатон').first()).toContainText('13.10.2026 – 15.11.2026')
   await expect(row(page, 'Англ. яз. тест')).toContainText('13.11.2026 17:00')
-  await expect(row(page, 'Физра тест')).toContainText('без даты')
+  // Дело без даты попадает в «Когда-нибудь», а не в список дедлайнов (BR-10)
+  await expect(page.getByTestId('someday-list')).toContainText('Физра тест')
   await expect(row(page, 'Подготовка к экзаменам')).toContainText('15.12.2026 – 31.12.2026')
 })
 
@@ -46,9 +47,9 @@ test('порядок в списке: по дате конца, при равн�
   await open(page)
   await switchTo(page, 'Демо (демо)')
   const titles = await page.getByTestId('event-list').locator('.events__title').allTextContents()
-  // 21.10: «Матан КР» (важность 1) выше «СИИБД КР» (ручная важность 3); без даты в конце
+  // 21.10: «Матан КР» (важность 1) выше «СИИБД КР» (ручная важность 3); дело без даты в список не входит
   expect(titles.indexOf('Матан КР')).toBeLessThan(titles.indexOf('СИИБД КР'))
-  expect(titles.at(-1)).toBe('Физра тест')
+  expect(titles).not.toContain('Физра тест')
   expect(titles[0]).toBe('Матан КР')
 })
 
@@ -251,7 +252,7 @@ test('LC-7: удаление только после подтверждения;
 }) => {
   await open(page)
   await switchTo(page, 'Демо (демо)')
-  await row(page, 'Физра тест').getByRole('button').click()
+  await row(page, 'Физра тест').getByRole('button', { name: 'Физра тест' }).click()
 
   await dialog(page).getByRole('button', { name: 'Удалить' }).click()
   await expect(dialog(page).getByText('Удалить событие навсегда?')).toBeVisible()
@@ -262,7 +263,7 @@ test('LC-7: удаление только после подтверждения;
   await expect(row(page, 'Физра тест')).toBeVisible()
 
   // Подтверждение: событие удалено
-  await row(page, 'Физра тест').getByRole('button').click()
+  await row(page, 'Физра тест').getByRole('button', { name: 'Физра тест' }).click()
   await dialog(page).getByRole('button', { name: 'Удалить' }).click()
   await dialog(page).getByRole('button', { name: 'Да, удалить навсегда' }).click()
   await expect(row(page, 'Физра тест')).toHaveCount(0)
@@ -271,7 +272,7 @@ test('LC-7: удаление только после подтверждения;
 
   await reloadAndOpenList(page)
   await switchTo(page, 'Демо (демо)')
-  await expect(page.getByTestId('event-list').getByRole('listitem')).toHaveCount(9)
+  await expect(page.locator('[data-testid="event-list"], [data-testid="someday-list"]').getByRole('listitem')).toHaveCount(9)
   await expect(row(page, 'Физра тест')).toHaveCount(0)
 })
 

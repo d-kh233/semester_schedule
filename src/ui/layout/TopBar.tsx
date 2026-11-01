@@ -3,7 +3,7 @@ import type { SaveState } from '../../app/useAppData'
 import type { Semester } from '../../core/model'
 import { ru } from '../../i18n/ru'
 
-export type View = 'grid' | 'list'
+export type View = 'grid' | 'list' | 'subjects'
 
 interface Props {
   semesters: Semester[]
@@ -141,6 +141,7 @@ export function TopBar({
           [
             ['grid', ru.topbar.gridTab],
             ['list', ru.topbar.deadlines],
+            ['subjects', ru.subjects.tab],
           ] as const
         ).map(([id, label]) => (
           <button

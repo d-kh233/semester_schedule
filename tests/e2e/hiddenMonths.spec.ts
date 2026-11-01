@@ -72,8 +72,8 @@ test('события скрытого месяца остаются в спис�
   await expect(page.locator('[data-testid^="block-2026-11-"]').filter({ hasText: 'акатон' })).toHaveCount(1)
 
   await openList(page)
-  await expect(page.getByTestId('event-list').getByRole('listitem').filter({ hasText: 'акатон' })).toHaveCount(1)
-  await expect(page.getByTestId('event-list').getByRole('listitem')).toHaveCount(10)
+  await expect(page.locator('[data-testid="event-list"], [data-testid="someday-list"]').getByRole('listitem').filter({ hasText: 'акатон' })).toHaveCount(1)
+  await expect(page.locator('[data-testid="event-list"], [data-testid="someday-list"]').getByRole('listitem')).toHaveCount(10)
   await openGrid(page)
 })
 

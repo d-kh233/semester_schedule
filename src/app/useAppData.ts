@@ -408,6 +408,57 @@ export function useAppData() {
     [commitEvents],
   )
 
+  // Отметка «выполнено» из списка дедлайнов: дата выполнения ставится так же, как в карточке
+  const setEventDone = useCallback(
+    (id: string, done: boolean) => {
+      const current = stateRef.current
+      const old = current.events.find((e) => e.id === id)
+      if (!old) return
+      const now = nowIso()
+      const next: EventRecord = { ...old, done, updatedAt: now }
+      const updated: EventRecord = {
+        ...next,
+        completedAt: completedAtAfterSave(old, next, todayIso()),
+      }
+      commitEvents(
+        current.events.map((e) => (e.id === id ? updated : e)),
+        [id],
+      )
+    },
+    [commitEvents],
+  )
+
+  // Назначение даты делу «Когда-нибудь»: оно переходит в сетку на эту дату (день конца = дата)
+  const setEventDate = useCallback(
+    (id: string, date: IsoDate) => {
+      const current = stateRef.current
+      const old = current.events.find((e) => e.id === id)
+      if (!old) return
+      const updated: EventRecord = { ...old, startDate: date, endDate: date, updatedAt: nowIso() }
+      commitEvents(
+        current.events.map((e) => (e.id === id ? updated : e)),
+        [id],
+      )
+    },
+    [commitEvents],
+  )
+
+  // Правка предмета: имя, короткое имя и вес. Проверку делает окно «Предметы».
+  const updateSubject = useCallback(
+    (id: string, patch: Pick<Subject, 'name' | 'shortName' | 'weight'>) => {
+      const current = stateRef.current
+      const old = current.subjects.find((s) => s.id === id)
+      if (!old) return
+      const updated: Subject = { ...old, ...patch }
+      apply({
+        ...current,
+        subjects: sortSubjects(current.subjects.map((s) => (s.id === id ? updated : s))),
+      })
+      persist((db) => putSubject(db, updated))
+    },
+    [apply, persist],
+  )
+
   // Окончательное удаление: интерфейс вызывает только после явного подтверждения
   const deleteEvent = useCallback(
     (id: string) => {
@@ -466,8 +517,8 @@ export function useAppData() {
   const redo = useCallback(() => stepHistory('redo'), [stepHistory])
 
   const addSubject = useCallback(
-    (name: string, shortName: string, demo: boolean): Subject => {
-      const subject = createSubject({ name, shortName }, crypto.randomUUID(), demo)
+    (name: string, shortName: string, demo: boolean, weight = 1): Subject => {
+      const subject = { ...createSubject({ name, shortName }, crypto.randomUUID(), demo), weight }
       const current = stateRef.current
       apply({ ...current, subjects: sortSubjects([...current.subjects, subject]) })
       persist((db) => putSubject(db, subject))
@@ -663,9 +714,12 @@ export function useAppData() {
     restoreSchedule,
     saveEvent,
     setEventArchived,
+    setEventDone,
+    setEventDate,
     deleteEvent,
     resortLanes,
     addSubject,
+    updateSubject,
     applyEventChanges,
     revertEventChanges,
     addImportanceLevels,

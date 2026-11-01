@@ -238,3 +238,11 @@ export function buildLevelsUpTo(
   }
   return added
 }
+
+// Вес предмета: целое от 1 до 10. Диапазон выбран для интерфейса, в ТЗ его нет (допущение).
+export const WEIGHT_MIN = 1
+export const WEIGHT_MAX = 10
+
+export function isValidWeight(value: number): boolean {
+  return Number.isInteger(value) && value >= WEIGHT_MIN && value <= WEIGHT_MAX
+}

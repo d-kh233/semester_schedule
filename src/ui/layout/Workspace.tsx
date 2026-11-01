@@ -17,6 +17,7 @@ import { DeadlinesPage } from '../events/DeadlinesPage'
 import { EventCard } from '../events/EventCard'
 import { EventList } from '../events/EventList'
 import { SemesterGrid } from '../grid/SemesterGrid'
+import { SubjectsPage } from '../subjects/SubjectsPage'
 import { ImportDialog } from '../import/ImportDialog'
 import { QuickInput } from '../input/QuickInput'
 import { useInputEngine } from '../input/useInputEngine'
@@ -169,6 +170,17 @@ export function Workspace({
             }
           />
         </div>
+        {view === 'subjects' && (
+          <SubjectsPage
+            subjects={subjects}
+            events={events}
+            types={data.types}
+            onAdd={(name, shortName, weight) => {
+              data.addSubject(name, shortName, active.isDemo, weight)
+            }}
+            onUpdate={data.updateSubject}
+          />
+        )}
         {view === 'list' && (
           <DeadlinesPage>
             <EventList
@@ -179,7 +191,11 @@ export function Workspace({
               onAdd={() => setCard({ eventId: null, date: null })}
               onImport={() => setImportOpen(true)}
               onOpen={(id) => setCard({ eventId: id, date: null })}
+              semesterStart={active.startDate}
+              semesterEnd={active.endDate}
               onRestore={(id) => data.setEventArchived(id, false)}
+              onToggleDone={data.setEventDone}
+              onAssignDate={data.setEventDate}
             />
           </DeadlinesPage>
         )}

@@ -11,7 +11,7 @@ async function openDemoList(page: Page) {
   await expect(eventRows(page)).toHaveCount(10)
 }
 
-const eventRows = (page: Page) => page.getByTestId('event-list').getByRole('listitem')
+const eventRows = (page: Page) => page.locator('[data-testid="event-list"], [data-testid="someday-list"]').getByRole('listitem')
 const row = (page: Page, text: string): Locator => eventRows(page).filter({ hasText: text })
 const dialog = (page: Page) => page.getByRole('dialog', { name: 'Импорт текстом' })
 const textBox = (page: Page) => dialog(page).getByRole('textbox', { name: 'Импорт текстом' })

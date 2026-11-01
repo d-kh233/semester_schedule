@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildDefaultCatalog,
   createSubject,
+  isValidWeight,
   parseEventType,
   parseImportanceLevel,
   parseSubject,
@@ -171,3 +172,14 @@ describe('порядок справочников', () => {
   })
 })
 
+
+describe('isValidWeight (вес предмета)', () => {
+  it('целое от 1 до 10', () => {
+    expect(isValidWeight(1)).toBe(true)
+    expect(isValidWeight(10)).toBe(true)
+    expect(isValidWeight(0)).toBe(false)
+    expect(isValidWeight(11)).toBe(false)
+    expect(isValidWeight(2.5)).toBe(false)
+    expect(isValidWeight(Number.NaN)).toBe(false)
+  })
+})

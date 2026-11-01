@@ -10,7 +10,7 @@ async function open(page: Page) {
 }
 
 const input = (page: Page) => page.getByRole('textbox', { name: 'Строка ввода' })
-const eventRows = (page: Page) => page.getByTestId('event-list').getByRole('listitem')
+const eventRows = (page: Page) => page.locator('[data-testid="event-list"], [data-testid="someday-list"]').getByRole('listitem')
 const row = (page: Page, text: string): Locator => eventRows(page).filter({ hasText: text })
 const undoButton = (page: Page) => page.getByTestId('undo')
 const redoButton = (page: Page) => page.getByTestId('redo')
