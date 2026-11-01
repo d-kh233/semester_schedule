@@ -47,6 +47,8 @@ export interface ParsedEvent {
   importance: number | null
   // Окна практики, если их несколько; иначе пусто
   windows: ParsedWindow[]
+  // Отмечено «выполнено» в строке списка; иначе не задано (false)
+  done?: boolean
 }
 
 export type ParseIssue =

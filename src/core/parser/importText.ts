@@ -99,10 +99,18 @@ export function parseImportText(text: string, ctx: ParseContext): ImportRow[] {
   const rows: ImportRow[] = []
   let header: string | null = null
   let subject: Subject | null = null
+  const lines = text.split(/\r?\n/)
 
-  text.split(/\r?\n/).forEach((raw, index) => {
+  lines.forEach((raw, index) => {
     const trimmed = raw.trim()
     if (trimmed === '') return
+    // Строка списка «Матан · КР · 21.10.2026»
+    if (trimmed.includes(DOT)) {
+      rows.push(parseDotRow(trimmed, index + 1, ctx))
+      return
+    }
+    // Строка-название над строкой со «·» повторяет её, пропускаем
+    if (nextLineHasDot(lines, index)) return
     const found = splitHeader(trimmed, ctx)
     let pieces: string[]
     if (found) {
@@ -119,6 +127,54 @@ export function parseImportText(text: string, ctx: ParseContext): ImportRow[] {
     }
   })
   return rows
+}
+
+const DOT = '·'
+const DONE_WORD = /выполнено/i
+const WINDOWS_PREFIX = /^окна\s*:/i
+const DATE_IN_TEXT = /\d{1,2}\.\d{1,2}(?:\.\d{2,4})?/g
+const DASH_BETWEEN_DATES = /\s*[–—-]\s*(?=\d)/g
+
+function nextLineHasDot(lines: string[], index: number): boolean {
+  const next = lines.slice(index + 1).find((line) => line.trim() !== '')
+  return next !== undefined && next.includes(DOT)
+}
+
+// Даты и время строки списка в виде, который понимает строка ввода
+function datesOf(parts: string[]): string {
+  const windows = parts.find((p) => WINDOWS_PREFIX.test(p))
+  if (windows) return (windows.match(DATE_IN_TEXT) ?? []).join(', ')
+  return parts
+    .filter((p) => p !== '' && !/^без даты$/i.test(p) && !DONE_WORD.test(p))
+    .map((p) => p.replace(DASH_BETWEEN_DATES, '–'))
+    .join(' ')
+}
+
+function isTypeWord(word: string, ctx: ParseContext): boolean {
+  const key = word.trim().toLowerCase()
+  return ctx.types.some((t) => t.name.toLowerCase() === key || t.keywords.includes(key))
+}
+
+// «Матан · КР · 21.10.2026 · окна: …» или «Хакатон · 13.10.2026 – 15.11.2026» (без предмета)
+function parseDotRow(text: string, line: number, ctx: ParseContext): ImportRow {
+  const parts = text.split(DOT).map((p) => p.trim())
+  const [first = '', ...rest] = parts
+  const done = rest.some((p) => DONE_WORD.test(p))
+
+  if (isTypeWord(first, ctx)) {
+    const body = [first, datesOf(rest)].filter((x) => x !== '').join(' ')
+    const result = parseInputLine(body, ctx)
+    const base = { line, text: body, header: null, subject: null }
+    if (!result.ok) return { ...base, result: { ok: false, issue: { kind: 'parse', issue: result.issue } } }
+    return { ...base, result: { ok: true, event: { ...result.event, done } } }
+  }
+
+  const [typePart = '', ...dateParts] = rest
+  const body = [typePart, datesOf(dateParts)].filter((x) => x !== '').join(' ')
+  const subject = findHeaderSubject(first, ctx.subjects)
+  const row = parseRow(body, line, first, subject, ctx)
+  if (!row.result.ok || !done) return row
+  return { ...row, result: { ok: true, event: { ...row.result.event, done } } }
 }
 
 export interface PlannedRow {

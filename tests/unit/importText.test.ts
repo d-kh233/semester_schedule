@@ -183,3 +183,72 @@ describe('подсказка предмета для разбора строки
     expect(result.ok && result.event.title).toBe('Матан КР')
   })
 })
+
+// Список как на экране: «Предмет · Тип · дата». Строки-названия над ними пропускаются.
+describe('импорт строк списка с «·»', () => {
+  const list = [
+    'Матан КР 1',
+    'Матан · КР · 21.10.2026',
+    'СИИБД РТ 3,4',
+    'СИИБД · Практика · 10.11.2026',
+    'Матан практика 2',
+    'Матан · Практика · 10.11.2026 · окна: 10.11.2026 (планируемое), 24.11.2026 (людное)',
+    'Англ. яз. тест',
+    'Англ. яз. · Тест · 13.11.2026 17:00',
+    'Хакатон',
+    'Хакатон · 13.10.2026 – 15.11.2026',
+    'Матан Тест',
+    'Матан · Тест · 05.12.2026',
+    'Англ. яз. КР',
+    'Англ. яз. · КР · 12.12.2026',
+    'Матан КР',
+    'Матан · КР · 14.12.2026 · выполнено',
+    'Подготовка к экзаменам',
+    'Подготовка к экзаменам · 15.12.2026 – 31.12.2026',
+    'Физра тест',
+    'Физра · Тест · без даты',
+  ].join('\n')
+
+  const rows = parseImportText(list, ctx)
+
+  it('каждая строка «·» даёт строку, строки-названия пропускаются', () => {
+    expect(rows).toHaveLength(10)
+  })
+
+  it('обычная строка: предмет, тип и дата', () => {
+    const row = rows[0]!
+    expect(row.result.ok).toBe(true)
+    if (row.result.ok) {
+      expect(row.result.event.subjectId).toBe(matan.id)
+      expect(row.result.event.endDate).toBe('2026-10-21')
+    }
+  })
+
+  it('окна практики и время', () => {
+    const practice = rows[2]!
+    const timed = rows[3]!
+    expect(practice.result.ok && practice.result.event.windows).toHaveLength(2)
+    expect(timed.result.ok && timed.result.event.time).toBe('17:00')
+  })
+
+  it('период через тире и строка без предмета (хакатон)', () => {
+    const hack = rows[4]!
+    expect(hack.result.ok).toBe(true)
+    if (hack.result.ok) {
+      expect(hack.result.event.startDate).toBe('2026-10-13')
+      expect(hack.result.event.endDate).toBe('2026-11-15')
+    }
+  })
+
+  it('«выполнено» отмечает событие сделанным', () => {
+    const done = rows[7]!
+    expect(done.result.ok && done.result.event.done).toBe(true)
+  })
+
+  it('неизвестный предмет даёт ошибку с предметом, остальные строки целы', () => {
+    const physical = rows[9]!
+    expect(physical.result.ok).toBe(false)
+    if (!physical.result.ok) expect(physical.result.issue).toEqual({ kind: 'unknown-header', word: 'Физра' })
+    expect(rows[8]!.result.ok).toBe(true)
+  })
+})

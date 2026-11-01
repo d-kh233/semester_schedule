@@ -47,6 +47,7 @@ export function planChanges(
         time: parsed.time ?? match.time,
         typeId: parsed.typeId ?? match.typeId,
         windows: parsed.windows.length > 0 ? toWindows(parsed) : match.windows,
+        done: parsed.done ?? match.done,
         updatedAt: now,
       }
       working[working.indexOf(match)] = after
@@ -63,7 +64,7 @@ export function planChanges(
         time: parsed.time,
         importance: parsed.importance,
         note: '',
-        done: false,
+        done: parsed.done ?? false,
       },
       { id: newId(), semesterId },
       now,
