@@ -34,6 +34,7 @@ interface Props {
   onRename: (id: string, name: string) => void
   onArchive: (id: string) => void
   onRestore: (id: string) => void
+  onExport: () => void
   onClose: () => void
 }
 
@@ -41,6 +42,10 @@ export function SettingsDialog(props: Props) {
   const { active } = props
   return (
     <Modal title={ru.settings.title} closeLabel={ru.settings.close} wide onClose={props.onClose}>
+      <p>{ru.excel.exportHint}</p>
+      <button type="button" className="btn" onClick={props.onExport}>
+        {ru.excel.exportButton}
+      </button>
       <h3>{ru.settings.semesterTitle}</h3>
       <SemesterControls
         key={`controls-${active.id}`}

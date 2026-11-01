@@ -11,6 +11,7 @@ import {
   type Semester,
 } from '../../core/model'
 import { withAlpha } from '../../core/colors'
+import { ru } from '../../i18n/ru'
 import { paintLevels, resolvePalette } from '../../core/schedulePalette'
 import { DeadlinesPage } from '../events/DeadlinesPage'
 import { EventCard } from '../events/EventCard'
@@ -61,6 +62,27 @@ export function Workspace({
     todayColor: palette.todayColor,
   }
   const viewLevels = paintLevels(data.levels, palette.levelColors)
+
+  // Выгрузка всех данных в Excel (календари и служебные листы). Библиотека Excel грузится только здесь.
+  const exportExcel = async () => {
+    try {
+      const { buildExportWorkbook } = await import('../../excel/exportXlsx')
+      const { downloadWorkbook } = await import('../../excel/download')
+      const exportedAt = new Date().toISOString()
+      const workbook = buildExportWorkbook({
+        semesters: data.semesters,
+        events: data.events,
+        types: data.types,
+        levels: data.levels,
+        subjects: data.subjects,
+        settings: data.settings,
+        exportedAt,
+      })
+      await downloadWorkbook(workbook, `расписание-${exportedAt.slice(0, 10)}.xlsx`)
+    } catch {
+      window.alert(ru.excel.exportError)
+    }
+  }
 
   const events = data.events.filter((e) => e.semesterId === active.id)
   // Предметы демо не показываются в личном расписании, и наоборот
@@ -182,6 +204,7 @@ export function Workspace({
           onRename={(id, name) => data.updateSemester(id, { name })}
           onArchive={data.archiveSchedule}
           onRestore={data.restoreSchedule}
+          onExport={exportExcel}
           onClose={() => onSettingsOpenChange(false)}
         />
       )}
