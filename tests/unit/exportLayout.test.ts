@@ -3,6 +3,9 @@ import { buildDefaultCatalog, type ImportanceLevel } from '../../src/core/catalo
 import { buildDeadlineList, buildExportCalendar } from '../../src/core/exportLayout'
 import { createEvent, type EventRecord } from '../../src/core/events'
 import { createSemester, type Semester } from '../../src/core/model'
+import { resolvePalette } from '../../src/core/schedulePalette'
+import { weekdayColor } from '../../src/core/colors'
+import { defaultSettings } from '../../src/core/settings'
 
 // Семестр 09.2026–01.2027, типы и уровни по умолчанию. Цвета уровней уже «раскрашены» расписанием.
 let n = 0
@@ -37,8 +40,17 @@ function event(overrides: Partial<EventRecord>): EventRecord {
   }
 }
 
+const palette = resolvePalette(null, defaultSettings, levels)
+
 function build(events: EventRecord[]) {
-  return buildExportCalendar({ semester, events, types, levels: paintedLevels })
+  return buildExportCalendar({
+    semester,
+    events,
+    types,
+    levels: paintedLevels,
+    weekGradient: palette.weekGradient,
+    monthColors: palette.monthColors,
+  })
 }
 
 describe('buildExportCalendar: строки по дням', () => {
@@ -87,6 +99,17 @@ describe('buildExportCalendar: строки по дням', () => {
     const december = build([]).months.find((m) => m.month === 12)!
     expect(december.rows).toHaveLength(1)
     expect(december.rows[0]?.cells.every((c) => c === null)).toBe(true)
+  })
+})
+
+describe('buildExportCalendar: цвета как на сайте', () => {
+  it('месяц и дни недели берут цвета палитры расписания', () => {
+    const october = build([]).months.find((m) => m.month === 10)!
+    expect(october.monthColor).toBe(palette.monthColors[9])
+    // 1 октября 2026 — четверг (индекс 3)
+    expect(october.weekdayColors[0]).toBe(weekdayColor(3, palette.weekGradient))
+    const september = build([]).months.find((m) => m.month === 9)!
+    expect(september.weekdayColors[30]).toBeNull()
   })
 })
 

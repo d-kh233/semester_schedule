@@ -8,6 +8,7 @@ import { ru } from '../../i18n/ru'
 import { Modal } from '../common/Modal'
 import { ScheduleManager } from '../schedules/ScheduleManager'
 import { CatalogControls } from './CatalogControls'
+import { ExportControls } from './ExportControls'
 import { PaletteControls } from './PaletteControls'
 import { SemesterControls } from './SemesterControls'
 
@@ -34,7 +35,7 @@ interface Props {
   onRename: (id: string, name: string) => void
   onArchive: (id: string) => void
   onRestore: (id: string) => void
-  onExport: () => void
+  onExport: (scheduleIds: string[], includeService: boolean) => void
   onClose: () => void
 }
 
@@ -42,10 +43,11 @@ export function SettingsDialog(props: Props) {
   const { active } = props
   return (
     <Modal title={ru.settings.title} closeLabel={ru.settings.close} wide onClose={props.onClose}>
-      <p>{ru.excel.exportHint}</p>
-      <button type="button" className="btn" onClick={props.onExport}>
-        {ru.excel.exportButton}
-      </button>
+      <ExportControls
+        semesters={props.semesters}
+        defaultId={active.id}
+        onExport={props.onExport}
+      />
       <h3>{ru.settings.semesterTitle}</h3>
       <SemesterControls
         key={`controls-${active.id}`}

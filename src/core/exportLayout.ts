@@ -4,6 +4,7 @@
 import { buildCalendar, type CalendarMonth } from './calendar'
 import type { EventType, ImportanceLevel } from './catalog'
 import { compareIsoDates, type IsoDate } from './dates'
+import { weekdayColor, type WeekGradient } from './colors'
 import { compareEvents, eventColor, type EventRecord } from './events'
 import { isBackgroundEvent } from './layout'
 import type { Semester } from './model'
@@ -25,6 +26,10 @@ export interface ExportMonth {
   key: string
   year: number
   month: number
+  // Цвет подписи месяца, как на сайте
+  monthColor: string
+  // Цвет заголовка дня недели (как на сайте); null, если такого числа нет
+  weekdayColors: (string | null)[]
   // Число дня или null, если такого числа в месяце нет
   days: (number | null)[]
   // 0 = понедельник; null, если такого числа нет
@@ -39,6 +44,9 @@ export interface ExportInput {
   types: EventType[]
   // Уровни с цветами расписания (после раскраски палитрой)
   levels: ImportanceLevel[]
+  // Цвета дней недели и месяцев расписания, как на сайте
+  weekGradient: WeekGradient
+  monthColors: string[]
 }
 
 export interface ExportCalendar {
@@ -119,9 +127,9 @@ function placeBackground(
 function buildMonth(
   month: CalendarMonth,
   events: EventRecord[],
-  types: EventType[],
-  levels: ImportanceLevel[],
+  input: ExportInput,
 ): ExportMonth {
+  const { types, levels } = input
   // Дедлайн ставится на день конца события (как в сетке, BR-4)
   const perDay: EventRecord[][] = month.days.map(() => [])
   const background: EventRecord[] = []
@@ -151,6 +159,10 @@ function buildMonth(
     key: month.key,
     year: month.year,
     month: month.month,
+    monthColor: input.monthColors[month.month - 1] ?? '#dddddd',
+    weekdayColors: month.days.map((d) =>
+      d.weekday === null ? null : weekdayColor(d.weekday, input.weekGradient),
+    ),
     days: month.days.map((d) => (d.status === 'nonexistent' ? null : d.day)),
     weekdays: month.days.map((d) => d.weekday),
     rows: rows.length > 0 ? rows : [{ kind: 'deadline', cells: emptyCells() }],
@@ -159,10 +171,9 @@ function buildMonth(
 
 // Календарь семестра. Архивные события и события без даты в календарь не попадают.
 export function buildExportCalendar(input: ExportInput): ExportCalendar {
-  const { semester, types, levels } = input
   const shown = input.events.filter((e) => !e.archived)
-  const months = buildCalendar(semester.startDate, semester.endDate)
-  return { months: months.map((month) => buildMonth(month, shown, types, levels)) }
+  const months = buildCalendar(input.semester.startDate, input.semester.endDate)
+  return { months: months.map((month) => buildMonth(month, shown, input)) }
 }
 
 // Список дедлайнов под таблицей: все не архивные события с датой, по дате конца

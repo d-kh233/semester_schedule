@@ -1,15 +1,16 @@
-// Выгрузка в Excel: календарь каждого расписания и служебные листы со всеми данными.
+// Выгрузка в Excel: календари выбранных расписаний и служебные листы с их данными.
 // Листы с данными нужны для восстановления (загрузка обратно появится позже).
 
 import ExcelJS from 'exceljs'
+import { contrastText } from '../core/colors'
 import type { EventType, ImportanceLevel, Subject } from '../core/catalog'
+import { formatDateRu } from '../core/dates'
 import {
   buildDeadlineList,
   buildExportCalendar,
   type DeadlineListItem,
   type ExportCalendar,
 } from '../core/exportLayout'
-import { formatDateRu } from '../core/dates'
 import type { EventRecord } from '../core/events'
 import { sortSemesters, type Semester } from '../core/model'
 import { paintLevels, resolvePalette } from '../core/schedulePalette'
@@ -21,11 +22,14 @@ export const EXPORT_FORMAT_VERSION = 1
 
 const DAY_COLUMNS = 31
 const FIRST_DAY_COLUMN = 2
-const MONTH_COLUMN_WIDTH = 18
-const DAY_COLUMN_WIDTH = 14
-const LINE_HEIGHT = 15
-// Примерно столько символов влезает в одну строку клетки
-const CHARS_PER_LINE = 13
+// Ширины подобраны так, чтобы все 31 день помещались на экране ноутбука при масштабе 70%
+const MONTH_COLUMN_WIDTH = 12
+const DAY_COLUMN_WIDTH = 6.5
+const ZOOM = 70
+const FONT_SIZE = 9
+const LINE_HEIGHT = 12
+// Примерно столько символов влезает в строку клетки шириной DAY_COLUMN_WIDTH
+const CHARS_PER_LINE = 7
 const GREY = 'FFE7E6E6'
 const SHEET_NAME_LIMIT = 31
 const FORBIDDEN_SHEET_CHARS = /[[\]:*?/\\]/g
@@ -37,12 +41,20 @@ export interface ExportData {
   levels: ImportanceLevel[]
   subjects: Subject[]
   settings: Settings
+  // Какие расписания выгружать (календарь и их данные в служебных листах)
+  scheduleIds: string[]
+  // Служебные листы для восстановления
+  includeService: boolean
   // Момент выгрузки строкой ISO (передаёт интерфейс)
   exportedAt: string
 }
 
 function argb(hex: string): string {
   return `FF${hex.replace('#', '').toUpperCase()}`
+}
+
+function fill(hex: string): ExcelJS.Fill {
+  return { type: 'pattern', pattern: 'solid', fgColor: { argb: argb(hex) } }
 }
 
 function yesNo(value: boolean): string {
@@ -80,6 +92,8 @@ function writeCalendarSheet(
   for (let d = 0; d < DAY_COLUMNS; d++) {
     ws.getColumn(FIRST_DAY_COLUMN + d).width = DAY_COLUMN_WIDTH
   }
+  // Масштаб и закреплённые строка с числами и столбец месяцев: всё видно сразу
+  ws.views = [{ state: 'frozen', xSplit: 1, ySplit: 1, zoomScale: ZOOM }]
 
   const numbers = ws.getRow(1)
   for (let d = 1; d <= DAY_COLUMNS; d++) numbers.getCell(FIRST_DAY_COLUMN + d - 1).value = d
@@ -88,38 +102,49 @@ function writeCalendarSheet(
   let r = 2
   for (const month of calendar.months) {
     const weekRow = ws.getRow(r)
-    weekRow.getCell(1).value = `${ru.months[month.month - 1]} ${month.year}`
-    weekRow.getCell(1).font = { bold: true }
+    const monthCell = weekRow.getCell(1)
+    monthCell.value = `${ru.months[month.month - 1]} ${month.year}`
+    monthCell.fill = fill(month.monthColor)
+    monthCell.font = { bold: true, size: FONT_SIZE, color: { argb: argb(contrastText(month.monthColor)) } }
+    monthCell.alignment = { vertical: 'middle', wrapText: true }
     month.weekdays.forEach((weekday, i) => {
       const cell = weekRow.getCell(FIRST_DAY_COLUMN + i)
-      if (weekday !== null) cell.value = ru.weekdaysShort[weekday]
-      cell.alignment = { horizontal: 'center' }
+      const color = month.weekdayColors[i]
+      cell.alignment = { horizontal: 'center', vertical: 'middle' }
+      cell.font = { bold: true, size: FONT_SIZE }
+      if (weekday !== null && color) {
+        cell.value = ru.weekdaysShort[weekday]
+        cell.fill = fill(color)
+        cell.font = { bold: true, size: FONT_SIZE, color: { argb: argb(contrastText(color)) } }
+      } else {
+        cell.fill = fill(GREY)
+      }
     })
-    styleHeader(weekRow)
+    weekRow.height = LINE_HEIGHT + 2
     r++
 
     for (const row of month.rows) {
       const xrow = ws.getRow(r)
       let lines = 1
       month.days.forEach((day, i) => {
-        if (day === null) {
-          xrow.getCell(FIRST_DAY_COLUMN + i).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GREY } }
-        }
+        if (day === null) xrow.getCell(FIRST_DAY_COLUMN + i).fill = fill(GREY)
       })
       row.cells.forEach((cell, i) => {
         if (cell === null) return
         const target = xrow.getCell(FIRST_DAY_COLUMN + i)
         target.value = cell.text
         target.alignment = { vertical: 'top', wrapText: true }
+        target.font = { size: FONT_SIZE }
         if (cell.color) {
-          target.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argb(cell.color) } }
+          target.fill = fill(cell.color)
+          target.font = { size: FONT_SIZE, color: { argb: argb(contrastText(cell.color)) } }
         }
         if (cell.span > 1) {
           ws.mergeCells(r, FIRST_DAY_COLUMN + i, r, FIRST_DAY_COLUMN + i + cell.span - 1)
         }
-        lines = Math.max(lines, Math.ceil(cell.text.length / CHARS_PER_LINE))
+        lines = Math.max(lines, Math.ceil(cell.text.length / (CHARS_PER_LINE * cell.span)))
       })
-      xrow.height = LINE_HEIGHT * lines
+      xrow.height = LINE_HEIGHT * lines + 2
       r++
     }
     r++
@@ -149,8 +174,9 @@ function writeDeadlineList(ws: ExcelJS.Worksheet, start: number, items: Deadline
   })
 }
 
-function writeDataSheets(workbook: ExcelJS.Workbook, data: ExportData) {
+function writeDataSheets(workbook: ExcelJS.Workbook, data: ExportData, semesters: Semester[]) {
   const { sheets, headers } = ru.excel
+  const ids = new Set(semesters.map((s) => s.id))
   const addSheet = (name: string, columns: readonly string[], rows: (string | number)[][]) => {
     const ws = workbook.addWorksheet(name)
     styleHeader(ws.addRow(columns))
@@ -163,24 +189,26 @@ function writeDataSheets(workbook: ExcelJS.Workbook, data: ExportData) {
   addSheet(
     sheets.events,
     headers.events,
-    data.events.map((e) => [
-      e.id,
-      e.semesterId,
-      e.title,
-      e.typeId ?? '',
-      e.subjectId ?? '',
-      e.startDate ?? '',
-      e.endDate ?? '',
-      e.time ?? '',
-      e.importance ?? '',
-      e.lane ?? '',
-      e.note,
-      yesNo(e.done),
-      yesNo(e.archived),
-      json(e.windows),
-      e.createdAt,
-      e.updatedAt,
-    ]),
+    data.events
+      .filter((e) => ids.has(e.semesterId))
+      .map((e) => [
+        e.id,
+        e.semesterId,
+        e.title,
+        e.typeId ?? '',
+        e.subjectId ?? '',
+        e.startDate ?? '',
+        e.endDate ?? '',
+        e.time ?? '',
+        e.importance ?? '',
+        e.lane ?? '',
+        e.note,
+        yesNo(e.done),
+        yesNo(e.archived),
+        json(e.windows),
+        e.createdAt,
+        e.updatedAt,
+      ]),
   )
   addSheet(
     sheets.types,
@@ -209,7 +237,7 @@ function writeDataSheets(workbook: ExcelJS.Workbook, data: ExportData) {
   addSheet(
     sheets.schedules,
     headers.schedules,
-    data.semesters.map((s) => [
+    semesters.map((s) => [
       s.id,
       s.name,
       s.startDate,
@@ -234,19 +262,19 @@ function writeDataSheets(workbook: ExcelJS.Workbook, data: ExportData) {
     ['format', EXPORT_FORMAT],
     ['version', EXPORT_FORMAT_VERSION],
     ['exportedAt', data.exportedAt],
-    ['schedules', data.semesters.length],
-    ['events', data.events.length],
+    ['schedules', semesters.length],
+    ['events', data.events.filter((e) => ids.has(e.semesterId)).length],
   ])
 }
 
-// Книга Excel: по листу-календарю на каждое действующее расписание, затем служебные листы
+// Книга Excel: календарь на каждое выбранное расписание, затем служебные листы (если нужны)
 export function buildExportWorkbook(data: ExportData): ExcelJS.Workbook {
   const workbook = new ExcelJS.Workbook()
   workbook.created = new Date(data.exportedAt)
 
+  const chosen = sortSemesters(data.semesters).filter((s) => data.scheduleIds.includes(s.id))
   const used = new Set(Object.values(ru.excel.sheets).map((name) => name.toLowerCase()))
-  for (const semester of sortSemesters(data.semesters)) {
-    if (semester.archived || semester.isDemo) continue
+  for (const semester of chosen) {
     const palette = resolvePalette(semester.palette, data.settings, data.levels)
     const events = data.events.filter((e) => e.semesterId === semester.id)
     const calendar = buildExportCalendar({
@@ -254,11 +282,13 @@ export function buildExportWorkbook(data: ExportData): ExcelJS.Workbook {
       events,
       types: data.types,
       levels: paintLevels(data.levels, palette.levelColors),
+      weekGradient: palette.weekGradient,
+      monthColors: palette.monthColors,
     })
     const ws = workbook.addWorksheet(sheetNameFor(semester.name, used))
     writeCalendarSheet(ws, calendar, events, data.types)
   }
 
-  writeDataSheets(workbook, data)
+  if (data.includeService) writeDataSheets(workbook, data, chosen)
   return workbook
 }

@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs'
 import { describe, expect, it } from 'vitest'
 import { buildDefaultCatalog } from '../../src/core/catalog'
+import { weekdayColor } from '../../src/core/colors'
 import { createEvent, type EventRecord } from '../../src/core/events'
 import { createSemester, type Semester } from '../../src/core/model'
 import { paintLevels, resolvePalette } from '../../src/core/schedulePalette'
@@ -51,6 +52,8 @@ const data: ExportData = {
   levels,
   subjects: [],
   settings: defaultSettings,
+  scheduleIds: [main.id, archived.id],
+  includeService: true,
   exportedAt: '2026-11-01T12:00:00.000Z',
 }
 
@@ -64,14 +67,56 @@ async function reload(workbook: ExcelJS.Workbook): Promise<ExcelJS.Workbook> {
 // Цвет уровня с номером 1 у этого расписания (как в интерфейсе)
 const levelOneColor = paintLevels(levels, resolvePalette(null, defaultSettings, levels).levelColors)[0]!.color
 
-describe('buildExportWorkbook: листы', () => {
-  it('календарь на каждое действующее расписание, затем служебные листы; архив и демо без календаря', async () => {
-    const wb = await reload(buildExportWorkbook(data))
+describe('buildExportWorkbook: выбор', () => {
+  it('выгружаются только выбранные расписания', async () => {
+    const wb = await reload(buildExportWorkbook({ ...data, scheduleIds: [main.id] }))
+    expect(wb.worksheets.map((ws) => ws.name)).not.toContain('Старое')
+    const events = wb.getWorksheet('События')!
+    expect(events.rowCount).toBe(1 + 3)
+  })
+
+  it('без служебных листов в файле только календари', async () => {
+    const wb = await reload(buildExportWorkbook({ ...data, includeService: false }))
+    expect(wb.worksheets.map((ws) => ws.name)).toEqual(['Осень', 'Старое'])
+  })
+
+  it('служебные листы со всеми данными выбранных расписаний', async () => {
+    const wb = await reload(buildExportWorkbook({ ...data, scheduleIds: [main.id] }))
     const names = wb.worksheets.map((ws) => ws.name)
-    expect(names.slice(0, 1)).toEqual(['Осень'])
     expect(names).toEqual(
       expect.arrayContaining(['События', 'Типы', 'Уровни', 'Предметы', 'Расписания', 'Настройки', 'Служебный']),
     )
+  })
+})
+
+describe('buildExportWorkbook: цвета', () => {
+  it('месяц и дни недели окрашены цветами сайта, текст читается на заливке', async () => {
+    const wb = await reload(buildExportWorkbook({ ...data, scheduleIds: [main.id], includeService: false }))
+    const ws = wb.getWorksheet('Осень')!
+    const palette = resolvePalette(null, defaultSettings, levels)
+    const october = findCell(ws, 'Октябрь 2026').cell
+    expect(october.fill).toMatchObject({ fgColor: { argb: argbOf(palette.monthColors[9]!) } })
+    // Первое число октября — четверг: колонка 2 в строке с днями недели
+    // Название месяца и дни недели стоят в одной строке
+    const weekRow = findCell(ws, 'Октябрь 2026').row
+    expect(ws.getCell(weekRow, 2).fill).toMatchObject({
+      fgColor: { argb: argbOf(weekdayColor(3, palette.weekGradient)) },
+    })
+  })
+
+  it('ширина дня и масштаб позволяют видеть все 31 день на экране', async () => {
+    const wb = await reload(buildExportWorkbook({ ...data, scheduleIds: [main.id], includeService: false }))
+    const ws = wb.getWorksheet('Осень')!
+    expect(ws.getColumn(2).width).toBeLessThanOrEqual(7)
+    expect(ws.views[0]?.zoomScale).toBeLessThanOrEqual(80)
+  })
+})
+
+describe('buildExportWorkbook: листы', () => {
+  it('календарь на каждое выбранное расписание; архив без выбора не попадает, демо не выгружается', async () => {
+    const wb = await reload(buildExportWorkbook({ ...data, scheduleIds: [main.id] }))
+    const names = wb.worksheets.map((ws) => ws.name)
+    expect(names[0]).toBe('Осень')
     expect(names).not.toContain('Старое')
   })
 

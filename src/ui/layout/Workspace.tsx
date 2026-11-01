@@ -64,7 +64,7 @@ export function Workspace({
   const viewLevels = paintLevels(data.levels, palette.levelColors)
 
   // Выгрузка всех данных в Excel (календари и служебные листы). Библиотека Excel грузится только здесь.
-  const exportExcel = async () => {
+  const exportExcel = async (scheduleIds: string[], includeService: boolean) => {
     try {
       const { buildExportWorkbook } = await import('../../excel/exportXlsx')
       const { downloadWorkbook } = await import('../../excel/download')
@@ -76,6 +76,8 @@ export function Workspace({
         levels: data.levels,
         subjects: data.subjects,
         settings: data.settings,
+        scheduleIds,
+        includeService,
         exportedAt,
       })
       await downloadWorkbook(workbook, `расписание-${exportedAt.slice(0, 10)}.xlsx`)
