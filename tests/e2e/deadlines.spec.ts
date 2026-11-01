@@ -95,3 +95,45 @@ test('окно «Предметы» в демо: текст списка дед�
   const text = row.getByRole('textbox', { name: 'Англ. яз.' })
   await expect(text).toHaveValue(/^Англ\. яз\.:\n1\. /)
 })
+
+test('«Когда-нибудь» стоит справа от дедлайнов на широком экране', async ({ page }) => {
+  await openDemoList(page)
+  const viewport = page.viewportSize()
+  const dated = await page.getByTestId('event-list').boundingBox()
+  const someday = await page.getByRole('complementary', { name: 'Когда-нибудь' }).boundingBox()
+  expect(dated).not.toBeNull()
+  expect(someday).not.toBeNull()
+  if (viewport && viewport.width > 700) {
+    expect(someday!.x).toBeGreaterThanOrEqual(dated!.x + dated!.width)
+  } else {
+    expect(someday!.y).toBeGreaterThanOrEqual(dated!.y + dated!.height)
+  }
+})
+
+test('экспорт списка: все дедлайны с датами, по возрастанию, с предметом', async ({ page }) => {
+  await openDemoList(page)
+  await page.getByText('Экспорт списка текстом').click()
+  const text = page.getByRole('textbox', { name: 'Список дедлайнов для копирования' })
+  await expect(text).toHaveValue(/^1\. \d{2}\.\d{2} /)
+  // Дело без даты в экспорт не попадает
+  await expect(text).not.toContainText('Физра')
+  // Строк столько же, сколько дедлайнов с датой в списке (кроме архива)
+  const value = await text.inputValue()
+  const listed = await page.getByTestId('event-list').getByRole('listitem').count()
+  expect(value.split('\n')).toHaveLength(listed)
+})
+
+test('предметы: строка показывает вес и число дедлайнов, правка веса сохраняется', async ({
+  page,
+}) => {
+  await openDemoList(page)
+  await page.getByRole('tab', { name: 'Предметы' }).click()
+  const rows = page.getByTestId('subjects-list').getByRole('listitem')
+  await expect(rows.filter({ hasText: 'Англ. яз.' })).toContainText('Дедлайнов:')
+  await rows.filter({ hasText: 'Англ. яз.' }).getByRole('button', { name: 'Изменить' }).click()
+  // В режиме правки имя лежит в поле, поэтому строку ищем по кнопке «Сохранить»
+  const editing = rows.filter({ has: page.getByRole('button', { name: 'Сохранить' }) })
+  await editing.getByLabel('Вес').fill('7')
+  await editing.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(rows.filter({ hasText: 'Англ. яз.' })).toContainText('Вес 7')
+})

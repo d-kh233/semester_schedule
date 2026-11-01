@@ -810,3 +810,247 @@ button.btn--active {
   color: #b3261e;
   font-size: 13px;
 }
+
+/* Список дедлайнов: дедлайны слева, «Когда-нибудь» справа (на узком экране друг под другом) */
+.events__columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 320px);
+  gap: 16px;
+  align-items: start;
+}
+
+.events__main {
+  min-width: 0;
+}
+
+.events__someday {
+  padding-left: 14px;
+  border-left: 1px solid var(--line);
+}
+
+.events__someday h3 {
+  margin-top: 0;
+}
+
+.someday__row {
+  flex-wrap: wrap;
+}
+
+.someday__assign {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.form-error {
+  margin: 4px 0 0;
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.events__export {
+  margin: 4px 0 10px;
+}
+
+.events__export summary,
+.subjects__deadlines summary {
+  cursor: pointer;
+  color: var(--accent-dark);
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+@media (max-width: 700px) {
+  .events__columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .events__someday {
+    padding-left: 0;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    padding-top: 10px;
+  }
+}
+
+/* Общее копирование текста (список дедлайнов и предмета) */
+.copy-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.copy-text__area {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fbfcfe;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.copy-text__empty {
+  margin: 0;
+  color: var(--muted);
+}
+
+.copy-text__bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.copy-text__until {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* Окно «Предметы» */
+.subjects {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.subjects__head h2 {
+  margin: 0;
+}
+
+.subjects__hint {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 13px;
+}
+
+.field > span {
+  color: var(--muted);
+}
+
+.field input {
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text);
+  background: #fff;
+}
+
+.field input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.field--name input {
+  min-width: 200px;
+}
+
+.field--weight input {
+  width: 80px;
+}
+
+.subjects__add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f7f9fd;
+}
+
+.subjects__add .form-error {
+  flex-basis: 100%;
+}
+
+.subjects__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.subjects__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  gap: 4px 14px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.subjects__row--edit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+  background: #f7f9fd;
+}
+
+.subjects__main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.subjects__name {
+  font-weight: 600;
+}
+
+.subjects__short {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.subjects__weight {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #e6edfb;
+  color: var(--accent-dark);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.subjects__count {
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.subjects__deadlines {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+
+.subjects__actions {
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 700px) {
+  .subjects__row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}

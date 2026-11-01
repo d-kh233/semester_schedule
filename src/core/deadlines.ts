@@ -72,3 +72,31 @@ export function subjectListText(
   })
   return [`${subject.name}:`, ...lines].join('\n')
 }
+
+// Экспорт всех дедлайнов с датами: нумерованный список по возрастанию дат, с предметом.
+// until — дата, до которой включать (включительно); null — все. Пустой список даёт пустую строку.
+export function deadlineListText(
+  events: EventRecord[],
+  types: EventType[],
+  subjects: Subject[],
+  until: string | null,
+): string {
+  const dated = events.filter(
+    (e) =>
+      !e.archived &&
+      e.endDate !== null &&
+      (until === null || compareIsoDates(e.endDate, until) <= 0),
+  )
+  const sorted = [...dated].sort((a, b) => {
+    if (a.endDate !== b.endDate) return compareIsoDates(a.endDate ?? '', b.endDate ?? '')
+    return compareEvents(a, b, types)
+  })
+  return sorted
+    .map((e, index) => {
+      const subject = subjects.find((s) => s.id === e.subjectId)
+      const head = subject ? `${subject.name} · ` : ''
+      const time = e.time ? ` ${e.time}` : ''
+      return `${index + 1}. ${dayMonthText(e.endDate ?? '')} ${head}${listLabel(e, types)}${time}`
+    })
+    .join('\n')
+}

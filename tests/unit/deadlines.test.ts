@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { buildDefaultCatalog, createSubject } from '../../src/core/catalog'
 import {
   dayMonthText,
+  deadlineListText,
   sortDeadlines,
   subjectListText,
   undatedEvents,
@@ -136,5 +137,36 @@ describe('subjectListText (копирование списка по предме
 
   it('у предмета без дедлайнов только заголовок', () => {
     expect(subjectListText(matan, [], types, null)).toBe('Матан:')
+  })
+})
+
+describe('deadlineListText (экспорт всех дедлайнов с датами)', () => {
+  const subjects = [english, matan]
+  const all = [
+    event({ id: 'eng-late', subjectId: english.id, typeId: kr.id, endDate: '2026-12-12', startDate: '2026-12-12' }),
+    event({ id: 'matan-early', subjectId: matan.id, typeId: practice.id, endDate: '2026-02-12', startDate: '2026-02-12', time: '10:00' }),
+    event({ id: 'no-subject', title: 'Эссе', endDate: '2026-03-01', startDate: '2026-03-01' }),
+    event({ id: 'undated', endDate: null, startDate: null }),
+    event({ id: 'archived', archived: true, endDate: '2026-01-01', startDate: '2026-01-01' }),
+  ]
+
+  it('все живые дедлайны с датами по возрастанию, с предметом и временем', () => {
+    expect(deadlineListText(all, types, subjects, null)).toBe(
+      [
+        '1. 12.02 Матан · Практика 10:00',
+        '2. 01.03 Эссе',
+        '3. 12.12 Англ. яз. · КР',
+      ].join('\n'),
+    )
+  })
+
+  it('до выбранной даты включительно', () => {
+    expect(deadlineListText(all, types, subjects, '2026-03-01')).toBe(
+      ['1. 12.02 Матан · Практика 10:00', '2. 01.03 Эссе'].join('\n'),
+    )
+  })
+
+  it('без дедлайнов пустая строка', () => {
+    expect(deadlineListText([], types, subjects, null)).toBe('')
   })
 })

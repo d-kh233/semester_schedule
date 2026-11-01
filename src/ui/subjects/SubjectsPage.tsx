@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import {
   isValidWeight,
   validateSubject,
@@ -6,9 +6,9 @@ import {
   type Subject,
 } from '../../core/catalog'
 import { subjectListText } from '../../core/deadlines'
-import { isValidIsoDate } from '../../core/dates'
 import type { EventRecord } from '../../core/events'
 import { ru } from '../../i18n/ru'
+import { CopyText } from '../common/CopyText'
 
 interface Props {
   subjects: Subject[]
@@ -24,22 +24,66 @@ interface Draft {
   weight: string
 }
 
-// Ошибка проверки: код из validateSubject или «вес», либо null
+const EMPTY_DRAFT: Draft = { name: '', shortName: '', weight: '1' }
+
+// Ошибка проверки формы (текст из ru.ts) или null
 function checkDraft(draft: Draft, subjects: Subject[], editingId?: string): string | null {
-  const problem = validateSubject({ name: draft.name, shortName: draft.shortName }, subjects, editingId)
+  const problem = validateSubject(
+    { name: draft.name, shortName: draft.shortName },
+    subjects,
+    editingId,
+  )
   if (problem) return ru.subjects.errors[problem]
-  const weight = Number(draft.weight)
-  if (draft.weight.trim() === '' || !isValidWeight(weight)) return ru.subjects.errors['weight-invalid']
+  if (draft.weight.trim() === '' || !isValidWeight(Number(draft.weight))) {
+    return ru.subjects.errors['weight-invalid']
+  }
   return null
 }
 
-// Окно «Предметы»: список по весу, добавление, правка, список дедлайнов для копирования
-export function SubjectsPage({ subjects, events, types, onAdd, onUpdate }: Props) {
-  const [adding, setAdding] = useState<Draft>({ name: '', shortName: '', weight: '1' })
-  const [addError, setAddError] = useState<string | null>(null)
-  const sorted = [...subjects].sort((a, b) => b.weight - a.weight || a.name.localeCompare(b.name, 'ru'))
+// Поля имени, короткого имени и веса; одно и то же в форме добавления и в правке строки
+function SubjectFields({ draft, onChange }: { draft: Draft; onChange: (draft: Draft) => void }) {
+  return (
+    <>
+      <label className="field field--name">
+        <span>{ru.subjects.name}</span>
+        <input
+          value={draft.name}
+          onChange={(e) => onChange({ ...draft, name: e.target.value })}
+        />
+      </label>
+      <label className="field">
+        <span>{ru.subjects.shortName}</span>
+        <input
+          value={draft.shortName}
+          onChange={(e) => onChange({ ...draft, shortName: e.target.value })}
+        />
+      </label>
+      <label className="field field--weight">
+        <span>{ru.subjects.weight}</span>
+        <input
+          type="number"
+          min={1}
+          max={10}
+          step={1}
+          aria-label={ru.subjects.weight}
+          value={draft.weight}
+          onChange={(e) => onChange({ ...draft, weight: e.target.value })}
+        />
+      </label>
+    </>
+  )
+}
 
-  function add() {
+// Окно «Предметы»: добавление, список по весу, правка и копирование дедлайнов предмета
+export function SubjectsPage({ subjects, events, types, onAdd, onUpdate }: Props) {
+  const [adding, setAdding] = useState<Draft>(EMPTY_DRAFT)
+  const [addError, setAddError] = useState<string | null>(null)
+  const sorted = [...subjects].sort(
+    (a, b) => b.weight - a.weight || a.name.localeCompare(b.name, 'ru'),
+  )
+
+  function add(e: FormEvent) {
+    e.preventDefault()
     const problem = checkDraft(adding, subjects)
     if (problem) {
       setAddError(problem)
@@ -47,45 +91,26 @@ export function SubjectsPage({ subjects, events, types, onAdd, onUpdate }: Props
     }
     setAddError(null)
     onAdd(adding.name.trim(), adding.shortName.trim(), Number(adding.weight))
-    setAdding({ name: '', shortName: '', weight: '1' })
+    setAdding(EMPTY_DRAFT)
   }
 
   return (
     <section className="subjects" aria-label={ru.subjects.title}>
-      <h2>{ru.subjects.title}</h2>
+      <div className="subjects__head">
+        <h2>{ru.subjects.title}</h2>
+        <p className="subjects__hint">{ru.subjects.hint}</p>
+      </div>
 
-      {/* noValidate: проверку делает приложение, чтобы текст ошибки шёл из ru.ts, а не от браузера */}
-      <form
-        className="subjects__add"
-        noValidate
-        onSubmit={(e) => {
-          e.preventDefault()
-          add()
-        }}
-      >
-        <input
-          aria-label={ru.subjects.name}
-          placeholder={ru.subjects.name}
-          value={adding.name}
-          onChange={(e) => setAdding({ ...adding, name: e.target.value })}
-        />
-        <input
-          aria-label={ru.subjects.shortName}
-          placeholder={ru.subjects.shortName}
-          value={adding.shortName}
-          onChange={(e) => setAdding({ ...adding, shortName: e.target.value })}
-        />
-        <input
-          type="number"
-          min={1}
-          max={10}
-          step={1}
-          aria-label={ru.subjects.weight}
-          value={adding.weight}
-          onChange={(e) => setAdding({ ...adding, weight: e.target.value })}
-        />
-        <button type="submit">{ru.subjects.add}</button>
-        {addError && <span role="alert">{addError}</span>}
+      <form className="subjects__add" noValidate onSubmit={add}>
+        <SubjectFields draft={adding} onChange={setAdding} />
+        <button type="submit" className="btn btn--primary">
+          {ru.subjects.add}
+        </button>
+        {addError && (
+          <p role="alert" className="form-error">
+            {addError}
+          </p>
+        )}
       </form>
 
       {sorted.length === 0 ? (
@@ -119,12 +144,9 @@ interface RowProps {
 function SubjectRow({ subject, subjects, events, types, onUpdate }: RowProps) {
   const [editing, setEditing] = useState<Draft | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [until, setUntil] = useState('')
-  const [copied, setCopied] = useState<string | null>(null)
-
-  const untilDate = until !== '' && isValidIsoDate(until) ? until : null
-  const text = subjectListText(subject, events, types, untilDate)
-  const hasDeadlines = text.split('\n').length > 1
+  const datedCount = events.filter(
+    (e) => e.subjectId === subject.id && !e.archived && e.endDate !== null,
+  ).length
 
   function save() {
     if (!editing) return
@@ -142,77 +164,55 @@ function SubjectRow({ subject, subjects, events, types, onUpdate }: RowProps) {
     setEditing(null)
   }
 
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopied(ru.subjects.copied)
-    } catch {
-      setCopied(ru.subjects.copyFailed)
-    }
-  }
-
   if (editing) {
     return (
-      <li className="subjects__row">
-        <input
-          aria-label={ru.subjects.name}
-          value={editing.name}
-          onChange={(e) => setEditing({ ...editing, name: e.target.value })}
-        />
-        <input
-          aria-label={ru.subjects.shortName}
-          value={editing.shortName}
-          onChange={(e) => setEditing({ ...editing, shortName: e.target.value })}
-        />
-        <input
-          type="number"
-          min={1}
-          max={10}
-          step={1}
-          aria-label={ru.subjects.weight}
-          value={editing.weight}
-          onChange={(e) => setEditing({ ...editing, weight: e.target.value })}
-        />
-        <button type="button" className="btn btn--accent" onClick={save}>
-          {ru.subjects.save}
-        </button>
-        <button type="button" onClick={() => setEditing(null)}>
-          {ru.subjects.cancel}
-        </button>
-        {error && <span role="alert">{error}</span>}
+      <li className="subjects__row subjects__row--edit">
+        <SubjectFields draft={editing} onChange={setEditing} />
+        <div className="subjects__actions">
+          <button type="button" className="btn btn--primary" onClick={save}>
+            {ru.subjects.save}
+          </button>
+          <button type="button" className="btn" onClick={() => setEditing(null)}>
+            {ru.subjects.cancel}
+          </button>
+        </div>
+        {error && (
+          <p role="alert" className="form-error">
+            {error}
+          </p>
+        )}
       </li>
     )
   }
 
   return (
     <li className="subjects__row">
-      <span className="subjects__name">{subject.name}</span>
-      <span className="events__meta">
-        {subject.shortName} · {ru.subjects.weight} {subject.weight}
-      </span>
+      <div className="subjects__main">
+        <span className="subjects__name">{subject.name}</span>
+        <span className="subjects__short">{subject.shortName}</span>
+      </div>
+      <span className="subjects__weight">{`${ru.subjects.weight} ${subject.weight}`}</span>
+      <span className="subjects__count">{`${ru.subjects.deadlinesCount}: ${datedCount}`}</span>
       <button
         type="button"
+        className="btn"
         onClick={() =>
-          setEditing({ name: subject.name, shortName: subject.shortName, weight: String(subject.weight) })
+          setEditing({
+            name: subject.name,
+            shortName: subject.shortName,
+            weight: String(subject.weight),
+          })
         }
       >
         {ru.subjects.edit}
       </button>
-      <details>
+      <details className="subjects__deadlines">
         <summary>{ru.subjects.deadlinesTitle}</summary>
-        {hasDeadlines ? (
-          <textarea readOnly rows={Math.max(3, text.split('\n').length)} value={text} aria-label={subject.name} />
-        ) : (
-          <p>{ru.subjects.noDeadlines}</p>
-        )}
-        <label>
-          {ru.subjects.copyUntil}{' '}
-          <input type="date" value={until} onChange={(e) => setUntil(e.target.value)} />
-        </label>
-        <button type="button" onClick={copy}>
-          {ru.subjects.copy}
-        </button>
-        {copied && <span role="status">{copied}</span>}
+        <CopyText
+          ariaLabel={subject.name}
+          emptyText={ru.subjects.noDeadlines}
+          textFor={(until) => subjectListText(subject, events, types, until)}
+        />
       </details>
     </li>
   )
