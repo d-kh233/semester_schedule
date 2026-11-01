@@ -58,6 +58,7 @@ const events: EventRecord[] = [
     ],
   }),
   event({ id: 'e-old', archived: true, startDate: null, endDate: null, subjectId: null }),
+  event({ id: 'e-effort', effort: 'heavy', done: true, completedAt: '2026-10-30' }),
 ]
 
 const data: ExportData = {

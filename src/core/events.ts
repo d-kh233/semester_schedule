@@ -11,6 +11,10 @@ export interface EventWindow {
   planned: boolean
 }
 
+// Объём дедлайна для «Фокуса» (версия 2). Задаётся позже в карточке; пока только хранится
+export const EFFORTS = ['light', 'medium', 'heavy'] as const
+export type Effort = (typeof EFFORTS)[number]
+
 // Название EventRecord, чтобы не путать с браузерным Event
 export interface EventRecord {
   id: string
@@ -28,7 +32,11 @@ export interface EventRecord {
   lane: number | null
   note: string
   done: boolean
+  // Дата, когда отмечено выполненным; null, если не выполнено или дата неизвестна
+  completedAt: IsoDate | null
   archived: boolean
+  // Объём: лёгкое, среднее, тяжёлое; null — не указан
+  effort: Effort | null
   // Окна сдачи, если у практики их несколько; иначе пусто
   windows: EventWindow[]
   createdAt: string
@@ -124,11 +132,25 @@ export function createEvent(
     id: ids.id,
     semesterId: ids.semesterId,
     lane: null,
+    completedAt: null,
     archived: false,
+    effort: null,
     windows,
     createdAt: now,
     updatedAt: now,
   }
+}
+
+// Дата выполнения после сохранения карточки: уже выполненное сохраняет свою дату,
+// новое выполнение получает сегодняшнюю дату, снятая отметка очищает её
+export function completedAtAfterSave(
+  before: EventRecord | null,
+  after: EventRecord,
+  today: IsoDate,
+): IsoDate | null {
+  if (!after.done) return null
+  if (before?.done) return before.completedAt
+  return today
 }
 
 // Важность = ручное значение, иначе важность типа, иначе нет (BR-1, BR-2)
@@ -220,6 +242,7 @@ export function parseEvent(raw: unknown, fallbackNow: string): EventRecord | nul
       : null
   const lane =
     typeof raw.lane === 'number' && Number.isInteger(raw.lane) && raw.lane >= 0 ? raw.lane : null
+  const effort = EFFORTS.find((value) => value === raw.effort) ?? null
 
   return {
     id,
@@ -234,7 +257,9 @@ export function parseEvent(raw: unknown, fallbackNow: string): EventRecord | nul
     lane,
     note: typeof raw.note === 'string' ? raw.note : '',
     done: raw.done === true,
+    completedAt: validDate(raw.completedAt),
     archived: raw.archived === true,
+    effort,
     windows: parseWindows(raw.windows),
     createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : fallbackNow,
     updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : fallbackNow,

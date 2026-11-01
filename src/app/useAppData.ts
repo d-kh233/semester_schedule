@@ -11,7 +11,12 @@ import {
 } from '../core/catalog'
 import { mergeBackup, type BackupData, type BackupMerge } from '../core/backup'
 import type { IsoDate } from '../core/dates'
-import { createEvent, type EventFields, type EventRecord } from '../core/events'
+import {
+  completedAtAfterSave,
+  createEvent,
+  type EventFields,
+  type EventRecord,
+} from '../core/events'
 import { canDeleteLevel, canDeleteType, type DeleteBlock } from '../core/catalogRules'
 import { placeLanes, resetLaneIfSpaceChanged } from '../core/layout'
 import { createSemester, pickActiveId, sortSemesters, type Semester } from '../core/model'
@@ -43,6 +48,7 @@ import {
   type StoredData,
 } from '../storage/db'
 import { readLegacySettingsJson } from '../storage/localSettings'
+import { todayIso } from './today'
 
 export type SaveState = 'saved' | 'saving' | 'error'
 
@@ -345,9 +351,13 @@ export function useAppData() {
     (existing: EventRecord | null, fields: EventFields, semesterId: string) => {
       const current = stateRef.current
       const now = nowIso()
-      const saved: EventRecord = existing
+      const next: EventRecord = existing
         ? resetLaneIfSpaceChanged(existing, { ...existing, ...fields, updatedAt: now }, current.types)
         : createEvent(fields, { id: crypto.randomUUID(), semesterId }, now)
+      const saved: EventRecord = {
+        ...next,
+        completedAt: completedAtAfterSave(existing, next, todayIso()),
+      }
       const events = existing
         ? current.events.map((e) => (e.id === saved.id ? saved : e))
         : [...current.events, saved]

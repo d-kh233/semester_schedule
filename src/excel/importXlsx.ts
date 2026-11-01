@@ -4,7 +4,7 @@
 import ExcelJS from 'exceljs'
 import type { BackupData } from '../core/backup'
 import { parseEventType, parseImportanceLevel, parseSubject } from '../core/catalog'
-import { parseEvent } from '../core/events'
+import { EFFORTS, parseEvent } from '../core/events'
 import { parseSemester } from '../core/model'
 import { ru } from '../i18n/ru'
 
@@ -94,6 +94,9 @@ export async function readBackupWorkbook(buffer: Buffer, now: string): Promise<B
         windows: json(r[13]!, []),
         createdAt: r[14],
         updatedAt: r[15],
+        // Столбцы добавлены позже: в старых файлах их нет, тогда пусто
+        effort: EFFORTS.find((code) => ru.excel.effort[code] === r[16]) ?? null,
+        completedAt: nullable(r[17] ?? ''),
       },
       now,
     ),

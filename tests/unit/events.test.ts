@@ -3,6 +3,7 @@ import { buildDefaultCatalog, createSubject } from '../../src/core/catalog'
 import {
   buildEventTitle,
   compareEvents,
+  completedAtAfterSave,
   createEvent,
   effectiveImportance,
   eventColor,
@@ -50,7 +51,9 @@ function event(patch: Partial<EventRecord> = {}): EventRecord {
     lane: null,
     note: '',
     done: false,
+    completedAt: null,
     archived: false,
+    effort: null,
     windows: [],
     createdAt: NOW,
     updatedAt: NOW,
@@ -304,5 +307,68 @@ describe('parseEvent (чтение записи из хранилища)', () =>
     )
     expect(e?.endDate).toBe('2026-10-13')
     expect(e?.startDate).toBe('2026-10-13')
+  })
+})
+
+describe('объём и дата выполнения (поля для версий 2 и 3)', () => {
+  const TODAY = '2026-10-31'
+
+  it('новое событие: объём не указан, дата выполнения пустая', () => {
+    const e = createEvent(
+      { title: 'КР', typeId: null, subjectId: null, startDate: '2026-10-21', endDate: '2026-10-21', time: null, importance: null, note: '', done: false },
+      { id: 'a', semesterId: 's' },
+      NOW,
+    )
+    expect(e.effort).toBeNull()
+    expect(e.completedAt).toBeNull()
+  })
+
+  it('отметка «выполнено» ставит сегодняшнюю дату', () => {
+    const before = event({ done: false, completedAt: null })
+    const after = { ...before, done: true }
+    expect(completedAtAfterSave(before, after, TODAY)).toBe(TODAY)
+  })
+
+  it('новое событие, сразу выполненное, получает сегодняшнюю дату', () => {
+    expect(completedAtAfterSave(null, event({ done: true }), TODAY)).toBe(TODAY)
+  })
+
+  it('правка выполненного события сохраняет прежнюю дату выполнения', () => {
+    const before = event({ done: true, completedAt: '2026-10-20' })
+    const after = { ...before, title: 'Новое название' }
+    expect(completedAtAfterSave(before, after, TODAY)).toBe('2026-10-20')
+  })
+
+  it('выполненное без даты (старые записи) остаётся без даты', () => {
+    const before = event({ done: true, completedAt: null })
+    expect(completedAtAfterSave(before, before, TODAY)).toBeNull()
+  })
+
+  it('снятая отметка очищает дату выполнения', () => {
+    const before = event({ done: true, completedAt: '2026-10-20' })
+    const after = { ...before, done: false }
+    expect(completedAtAfterSave(before, after, TODAY)).toBeNull()
+  })
+
+  it('чтение записи: верный объём и дата сохраняются', () => {
+    const e = parseEvent({ ...event(), effort: 'heavy', completedAt: '2026-10-20' }, NOW)
+    expect(e?.effort).toBe('heavy')
+    expect(e?.completedAt).toBe('2026-10-20')
+  })
+
+  it('чтение записи: неизвестный объём и битая дата заменяются пустыми значениями', () => {
+    const e = parseEvent({ ...event(), effort: 'огромное', completedAt: '32.13.2026' }, NOW)
+    expect(e?.effort).toBeNull()
+    expect(e?.completedAt).toBeNull()
+  })
+
+  it('чтение старой записи без новых полей: объём и дата пустые, событие не теряется', () => {
+    const old: Record<string, unknown> = { ...event() }
+    delete old.effort
+    delete old.completedAt
+    const e = parseEvent(old, NOW)
+    expect(e).not.toBeNull()
+    expect(e?.effort).toBeNull()
+    expect(e?.completedAt).toBeNull()
   })
 })

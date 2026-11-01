@@ -211,6 +211,8 @@ function writeDataSheets(workbook: ExcelJS.Workbook, data: ExportData, semesters
         json(e.windows),
         e.createdAt,
         e.updatedAt,
+        e.effort ? ru.excel.effort[e.effort] : '',
+        e.completedAt ?? '',
       ]),
   )
   addSheet(
